@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "build": "nitro build",
+    "dev": "nitro dev",
+    "prepare": "nitro prepare",
+    "preview": "node .output/server/index.mjs"
+  },
+  "devDependencies": {
+    "@slack/cli-hooks": "^1.2.1",
+    "nitropack": "^2.12.4"
+  },
+  "packageManager": "pnpm@9.15.5+sha256.8472168c3e1fd0bff287e694b053fccbbf20579a3ff9526b6333beab8df65a8d",
+  "dependencies": {
+    "@slack/bolt": "^4.4.0",
+    "@vercel/bolt": "^1.0.9",
+    "ai": "5.0.0-beta.28"
+  }
+}
