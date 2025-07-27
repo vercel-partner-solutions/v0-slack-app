@@ -1,4 +1,10 @@
 {
+  "name": "AI SDK Vercel Slackbot",
+  "description": "A Slackbot built with the AI SDK and Bolt powered by Nitro",
+  "version": "0.0.1",
+  "private": true,
+  "author": "Matthew Lewis",
+  "license": "MIT",
   "scripts": {
     "build": "nitro build",
     "dev": "nitro dev",
