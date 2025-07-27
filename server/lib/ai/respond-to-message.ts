@@ -5,10 +5,10 @@ export const respondToMessage = async (message: string) => {
 		const { text } = await generateText({
 			model: "xai/grok-3",
 			prompt: `
-      You are a Slack bot, powered by the xai/grok-3 model.
-      You are a helpful assistant.
-      Respond to the following message from the user: ${message}
-      `,
+      		You are a Slack bot, powered by the xai/grok-3 model.
+      		You are a helpful assistant.
+      		Respond to the following message from the user: ${message}
+      		`,
 		});
 
 		return text;
