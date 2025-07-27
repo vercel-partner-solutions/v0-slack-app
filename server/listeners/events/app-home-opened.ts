@@ -9,8 +9,6 @@ const appHomeOpenedCallback = async ({
   if (event.tab !== "home") return;
 
   try {
-    // Get selected value from Redis
-
     await client.views.publish({
       user_id: event.user,
       view: {
