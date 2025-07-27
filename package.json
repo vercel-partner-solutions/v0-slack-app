@@ -14,10 +14,11 @@
     "lint:fix": "biome check . --write"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.1.2",
     "@slack/cli-hooks": "^1.2.1",
     "nitropack": "^2.12.4"
   },
-  "packageManager": "pnpm@9.15.5+sha256.8472168c3e1fd0bff287e694b053fccbbf20579a3ff9526b6333beab8df65a8d",
+  "packageManager": "pnpm",
   "dependencies": {
     "@slack/bolt": "^4.4.0",
     "@vercel/bolt": "^1.0.9",
