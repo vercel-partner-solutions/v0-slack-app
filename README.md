@@ -11,18 +11,13 @@ An AI-powered assistant built with Slack's Bolt Javascript framework powered by 
 
 ## Prerequisites
 
-Before getting started, ensure you have the following:
-
 ### Required
 - **Node.js 18+** - [Download here](https://nodejs.org/)
 - **pnpm** - This project uses pnpm as the package manager. Install with `npm install -g pnpm`
-- **Slack workspace** - You need a workspace where you can install apps
+- **Slack workspace** - You need a workspace where you have permission to install apps
   - Create a new workspace [here](https://slack.com/create)
   - Or use a Slack developer sandbox [here](https://api.slack.com/developer-program)
 - **Slack CLI** - [Installation guide](https://tools.slack.dev/slack-cli/guides/installing-the-slack-cli-for-mac-and-linux)
-
-### Recommended
-- **Slack Pro workspace** or **developer sandbox** (free workspaces have AI Assistant limitations)
 
 ## Setup
 
@@ -63,7 +58,7 @@ Update `.slack/config.json` to use your local app manifest:
 
 ```
 
-### 5. Install Slack App
+### 5. Create and Install Slack App
 ```bash
 slack app install
 ```
@@ -73,29 +68,23 @@ slack app install
 ```bash
 pnpm run dev:tunnel
 ```
-This creates an ngrok tunnel and updates your manifest automatically.
+Slack will prompt you to create another app. This will be the app you use for local development.
 
 ### 7. Configure Environment Variables
 Create a `.env` file in your project root with the following variables:
 
 ```env
-# Required: Get these from your Slack app settings (https://api.slack.com/apps)
-SLACK_SIGNING_SECRET=your_signing_secret_here
-SLACK_BOT_TOKEN=xoxb-your-bot-token-here
-
-# Required: AI Gateway API Key (https://vercel.com/ai/api-keys)
-AI_GATEWAY_API_KEY=your_ai_gateway_key_here
-
-# Alternative: Use Vercel OIDC Token instead of AI_GATEWAY_API_KEY
-# VERCEL_OIDC_TOKEN=your_vercel_token_here
+SLACK_SIGNING_SECRET="your_signing_secret_here"
+SLACK_BOT_TOKEN="xoxb-your-bot-token-here"
+AI_GATEWAY_API_KEY="your_ai_gateway_key_here"
 ```
 
-**To get your Slack credentials:**
-1. Go to [Slack App Settings](https://api.slack.com/apps) and select your app
+**Get your Slack credentials:**
+1. Go to [Slack App Settings](https://api.slack.com/apps) and select your local app
 2. **Basic Information** → Copy **Signing Secret** → Add to `SLACK_SIGNING_SECRET`
 3. **Install App** → Copy **Bot User OAuth Token** → Add to `SLACK_BOT_TOKEN`
 
-**To get your AI Gateway API Key:**
+**Get your AI Gateway API Key:**
 - Create one at [Vercel AI Gateway](https://vercel.com/ai/api-keys)
 
 **Alternative - Using Vercel OIDC Token:**
@@ -106,25 +95,28 @@ vercel env pull
 
 ## Usage
 
-After completing the setup:
-
-### Start Development
+### Start Development Server (Recommended)
 ```bash
 pnpm run dev:tunnel
 ```
-This starts your app with automatic ngrok tunneling.
+This starts your app with automatic ngrok tunneling and local manifest updates.
 
 ### Alternative: Manual Development
 ```bash
 slack run
 ```
-Starts the app without automatic tunnel creation.
+Starts the app without automatic tunnel creation. You will have to manually update your app's `manifest.json` file.
 
 ### Using the Bot
 1. Invite the bot to any channel: `@YourBotName`
-2. Send messages directly or mention the bot in channels
-3. Use threads for extended conversations
-4. Works in public channels, private channels, and DMs
+2. The bot will respond in public and private channels when `@` mentioned.
+3. The bot will respond to any messages sent in DMs (`im`), multi-person DMs (`mpim`) and group messages (`group`) that it is added to.
+
+### Enable the AI Assistant feature
+1. Open your Slack workspace preferences (`ctrl/cmd` + `,`)
+2. Open the **Navigation** tab and scroll to **App agents & assistants**
+3. Toggle the AI Assistant you would like to enable
+4. In the top right of your Slack workspace you will now see an icon to toggle a sidebar where you can interact with your AI Assistant
 
 ## Project Structure
 
