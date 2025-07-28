@@ -18,6 +18,7 @@ An AI-powered assistant built with Slack's Bolt Javascript framework powered by 
   - Create a new workspace [here](https://slack.com/create)
   - Or use a Slack developer sandbox [here](https://api.slack.com/developer-program)
 - **Slack CLI** - [Installation guide](https://tools.slack.dev/slack-cli/guides/installing-the-slack-cli-for-mac-and-linux)
+- **ngrok** - [Download here](https://ngrok.com/downloads)
 
 ## Setup
 
