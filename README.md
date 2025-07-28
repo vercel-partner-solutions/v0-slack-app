@@ -23,7 +23,7 @@ An AI-powered assistant built with Slack's Bolt Javascript framework powered by 
 
 ### 1. Clone and Initialize
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/vercel/ai-sdk-slackbot
 cd nitro-app
 pnpm install
 ```
@@ -144,7 +144,7 @@ Every incoming request is routed to a "listener". Inside this directory, we grou
 
 ### Common Issues
 
-**"AI Assistant feature error" on free workspace**
+**This workspace is not eligible for the next generation Slack platform.**
 - Solution: Upgrade to Slack Pro or use a [developer sandbox](https://api.slack.com/developer-program)
 
 **`slack init` command hangs**
