@@ -23,7 +23,7 @@ const directMessageCallback = async ({
 			});
 		}
 
-		const response = await respondToMessage(message.text, message.user);
+		const response = await respondToMessage(message.text);
 		await say({
 			text: response,
 			thread_ts: message.ts,

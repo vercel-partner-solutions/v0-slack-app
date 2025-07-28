@@ -13,7 +13,7 @@ const mpimMessageCallback = async ({
 		typeof message.text === "string"
 	) {
 		logger.debug("MPIM message received:", message.text);
-		const response = await respondToMessage(message.text, message.user);
+		const response = await respondToMessage(message.text);
 		await say(response);
 	} else {
 		logger.debug("MPIM message received with no text");

@@ -10,22 +10,37 @@ An AI-powered assistant built with Slack's Bolt Javascript framework powered by 
 - Easily extensible architecture to add custom tools (e.g., knowledge search)
 
 ## Prerequisites
-- Node.js 18+ installed
-- Slack workspace where you can install apps. If you don’t have one setup, you can create one [here](https://slack.com/create). Or, you can create a Slack developer sandbox [here](https://api.slack.com/developer-program).
-- Slack CLI installed. Install instructions [here](https://tools.slack.dev/slack-cli/guides/installing-the-slack-cli-for-mac-and-linux).
+
+Before getting started, ensure you have the following:
+
+### Required
+- **Node.js 18+** - [Download here](https://nodejs.org/)
+- **pnpm** - This project uses pnpm as the package manager. Install with `npm install -g pnpm`
+- **Slack workspace** - You need a workspace where you can install apps
+  - Create a new workspace [here](https://slack.com/create)
+  - Or use a Slack developer sandbox [here](https://api.slack.com/developer-program)
+- **Slack CLI** - [Installation guide](https://tools.slack.dev/slack-cli/guides/installing-the-slack-cli-for-mac-and-linux)
+
+### Recommended
+- **Slack Pro workspace** or **developer sandbox** (free workspaces have AI Assistant limitations)
 
 ## Setup
-1. Clone this repository
-```
-git clone https://github.com/vercel/vercel-bolt-template.git
-```
-2. Run `slack init` from your app's root directory
-```
-cd vercel-bolt-template && slack init
-```
-_This command may hang due to forcing `npm install`, there's an [open issue](https://github.com/slackapi/slack-cli/issues/170) to resolve this. Once you have a `./slack` directory with `hooks.json` and `config.json` you can exit the command with `ctrl/cmd + c`.
 
-3. Update your start command under `hooks.json` to use `pnpm dev`
+### 1. Clone and Initialize
+```bash
+git clone <your-repository-url>
+cd nitro-app
+pnpm install
+```
+
+### 2. Initialize Slack App
+```bash
+slack init
+```
+> **Note**: This command may hang due to forcing `npm install` ([known issue](https://github.com/slackapi/slack-cli/issues/170)). Once you see a `./slack` directory with `hooks.json` and `config.json`, you can exit with `Ctrl/Cmd + C`.
+
+### 3. Configure Slack Hooks
+Update your start command in `.slack/hooks.json`:
 ```json
 {
   "hooks": {
@@ -34,7 +49,8 @@ _This command may hang due to forcing `npm install`, there's an [open issue](htt
   }
 }
 ```
-4. Update your `config.json` file to use your local app manifest
+### 4. Configure Local Manifest
+Update `.slack/config.json` to use your local app manifest:
 ```json
 {
   "manifest": {
@@ -47,19 +63,68 @@ _This command may hang due to forcing `npm install`, there's an [open issue](htt
 
 ```
 
-5.  Run the `slack app install` command to create a new app using your local manifest.
-- Installing this app on a free workspace will cause an **AI Assistant** feature error. Upgrade to a Pro workspace or use a [developer sandbox]((https://api.slack.com/developer-program)).
+### 5. Install Slack App
+```bash
+slack app install
+```
+> ⚠️ **Important**: Installing on a free workspace will cause **AI Assistant** feature errors. Use a Pro workspace or [developer sandbox](https://api.slack.com/developer-program).
 
-6. Run the `pnpm run dev:tunnel` command to start your development server. Slack will prompt you to create a new app, which is the _local_ version of your app.
+### 6. Start Development Server
+```bash
+pnpm run dev:tunnel
+```
+This creates an ngrok tunnel and updates your manifest automatically.
 
-7. Open the Slack App settings and select the local version of your app. You can find your app settings [here](https://api.slack.com/apps).
+### 7. Configure Environment Variables
+Create a `.env` file in your project root with the following variables:
 
-- Copy the **Signing Secret** from **Basic Information** to your `SLACK_SIGNING_SECRET` environment variable.
-- Click the **Install App** tab and copy your **Bot User OAuth Token** to your `SLACK_BOT_TOKEN` environment variable.
+```env
+# Required: Get these from your Slack app settings (https://api.slack.com/apps)
+SLACK_SIGNING_SECRET=your_signing_secret_here
+SLACK_BOT_TOKEN=xoxb-your-bot-token-here
 
-8. Add your `AI_GATEWAY_API_KEY` environment variable. You can create one [here](https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%2Fapi-keys&title=).
+# Required: AI Gateway API Key (https://vercel.com/ai/api-keys)
+AI_GATEWAY_API_KEY=your_ai_gateway_key_here
 
-__Note__: You can also use your ``VERCEL_OIDC_TOKEN`` instead of an ``AI_GATEWAY_API_KEY``. You will need to run `vercel link` followed by `vercel env pull` to get this token.
+# Alternative: Use Vercel OIDC Token instead of AI_GATEWAY_API_KEY
+# VERCEL_OIDC_TOKEN=your_vercel_token_here
+```
+
+**To get your Slack credentials:**
+1. Go to [Slack App Settings](https://api.slack.com/apps) and select your app
+2. **Basic Information** → Copy **Signing Secret** → Add to `SLACK_SIGNING_SECRET`
+3. **Install App** → Copy **Bot User OAuth Token** → Add to `SLACK_BOT_TOKEN`
+
+**To get your AI Gateway API Key:**
+- Create one at [Vercel AI Gateway](https://vercel.com/ai/api-keys)
+
+**Alternative - Using Vercel OIDC Token:**
+```bash
+vercel link
+vercel env pull
+```
+
+## Usage
+
+After completing the setup:
+
+### Start Development
+```bash
+pnpm run dev:tunnel
+```
+This starts your app with automatic ngrok tunneling.
+
+### Alternative: Manual Development
+```bash
+slack run
+```
+Starts the app without automatic tunnel creation.
+
+### Using the Bot
+1. Invite the bot to any channel: `@YourBotName`
+2. Send messages directly or mention the bot in channels
+3. Use threads for extended conversations
+4. Works in public channels, private channels, and DMs
 
 ## Project Structure
 
@@ -82,3 +147,30 @@ Every incoming request is routed to a "listener". Inside this directory, we grou
 ### `/scripts/dev.tunnel.js`
 
 `dev.tunnel.js` is a helper command to improve the local developer experience. It will automatically create an `ngrok` tunnel and update your local app `manifest.json` to use the tunnel url. You can use `slack run` to start your app without the automatic tunnel creation.
+
+## Troubleshooting
+
+### Common Issues
+
+**"AI Assistant feature error" on free workspace**
+- Solution: Upgrade to Slack Pro or use a [developer sandbox](https://api.slack.com/developer-program)
+
+**`slack init` command hangs**
+- This is a [known issue](https://github.com/slackapi/slack-cli/issues/170)
+- Wait for `.slack/` directory to appear, then exit with `Ctrl/Cmd + C`
+
+**Bot not responding**
+- Check your `.env` file has correct values
+- Verify bot token starts with `xoxb-`
+- Ensure the bot is invited to the channel
+- Check the development server is running
+
+**Ngrok tunnel issues**
+- Try restarting with `pnpm run dev:tunnel`
+- Check if ngrok is properly installed
+- Verify your ngrok account limits
+
+**Environment variables not loading**
+- Ensure `.env` file is in project root
+- Restart your development server
+- Check for typos in variable names

@@ -7,7 +7,7 @@ const appMentionCallback = async ({
 	logger,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
 	logger.debug("App mentioned:", JSON.stringify(event, null, 2));
-	const response = await respondToMessage(event.text, event.user);
+	const response = await respondToMessage(event.text);
 	await say({
 		text: response,
 		thread_ts: event.thread_ts || event.ts,

@@ -13,7 +13,7 @@ const groupMessageCallback = async ({
 		typeof message.text === "string"
 	) {
 		logger.debug("Group message received:", message.text);
-		const response = await respondToMessage(message.text, message.user);
+		const response = await respondToMessage(message.text);
 		await say({
 			text: response,
 			thread_ts: message.ts,
