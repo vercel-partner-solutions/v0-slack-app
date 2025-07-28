@@ -1,5 +1,5 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
-import { respondToMessage } from "../../lib/ai/respond-to-message";
+import { respondToMessage } from "~/lib/ai/respond-to-message";
 
 const directMessageCallback = async ({
   message,
