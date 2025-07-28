@@ -1,5 +1,7 @@
 # AI SDK Slackbot with Bolt 
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-partner-solutions%2Fai-sdk-slackbot-nitro&env=SLACK_BOT_TOKEN,SLACK_SIGNING_SECRET&project-name=ai-sdk-slackbot&repository-name=ai-sdk-slackbot&demo-title=AI%20SDK%20Slackbot&demo-description=A%20Slackbot%20built%20with%20the%20AI%20SDK%20and%20Nitro%20Framework.)
+<br>
 An AI-powered assistant built with Slack's Bolt Javascript framework powered by the AI SDK by Vercel.
 
 ## Features
