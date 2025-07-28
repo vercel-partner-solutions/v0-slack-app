@@ -158,14 +158,21 @@ function startNgrok() {
   });
 }
 
-async function startSlackApp() {
+async function startSlackApp(appId) {
   return new Promise((resolve, reject) => {
-    console.log('🚀 Starting Slack app...');
+    console.log(`🚀 Starting Slack app ${appId}...`);
     
-    slackProcess = spawn('slack', ['run'], {
-      stdio: 'inherit',
-      shell: true
-    });
+    if (appId) {
+    slackProcess = spawn('slack', ['run', '-a', appId], {
+        stdio: 'inherit',
+        shell: true
+      });
+    } else {
+      slackProcess = spawn('slack', ['run'], {
+        stdio: 'inherit',
+        shell: true
+      });
+    }
     
     slackProcess.on('error', (error) => {
       console.error('❌ Failed to start Slack app:', error.message);
@@ -193,9 +200,13 @@ async function start() {
     
     // Update manifest with ngrok URL
     await updateManifest(ngrokUrl);
+
+    // Get the app_id from ./slack/apps.dev.json
+    const appsDev = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '.slack', 'apps.dev.json'), 'utf8'));
+    const appId = appsDev.E0931KUGUJC.app_id;
     
     // Start Slack app (which will start the dev server via hooks)
-    await startSlackApp();
+    await startSlackApp(appId);
   } catch (error) {
     console.error('\n❌ Failed to start development environment:', error.message);
     cleanup();

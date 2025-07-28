@@ -7,4 +7,3 @@ dist
 .env
 .vercel
 .env*.local
-.slack
