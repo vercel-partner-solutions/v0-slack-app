@@ -160,7 +160,11 @@ function startNgrok() {
 
 async function startSlackApp(appId) {
   return new Promise((resolve, reject) => {
+    if (!appId) {
+      console.log('🚀 Starting Slack app')
+    } else {
     console.log(`🚀 Starting Slack app ${appId}...`);
+    }
     
     if (appId) {
     slackProcess = spawn('slack', ['run', '-a', appId], {
@@ -202,8 +206,14 @@ async function start() {
     await updateManifest(ngrokUrl);
 
     // Get the app_id from ./slack/apps.dev.json
-    const appsDev = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '.slack', 'apps.dev.json'), 'utf8'));
-    const appId = appsDev.E0931KUGUJC.app_id;
+    let appsDev = {};
+    const appsDevPath = path.join(__dirname, '..', '.slack', 'apps.dev.json');
+    if (fs.existsSync(appsDevPath)) {
+      appsDev = JSON.parse(fs.readFileSync(appsDevPath, 'utf8'));
+    }
+    
+    const firstAppKey = Object.keys(appsDev)[0];
+    const appId = firstAppKey ? appsDev[firstAppKey]?.app_id : undefined;
     
     // Start Slack app (which will start the dev server via hooks)
     await startSlackApp(appId);
