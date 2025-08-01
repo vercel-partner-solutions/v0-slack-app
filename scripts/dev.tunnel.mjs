@@ -1,7 +1,9 @@
 import { exec, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MANIFEST_PATH = path.join(__dirname, "..", "manifest.json");
 const NGROK_PORT = 3000;
 const NGROK_STARTUP_DELAY = 3000;

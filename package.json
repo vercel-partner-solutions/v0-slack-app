@@ -1,5 +1,5 @@
 {
-  "name": "AI SDK Vercel Slackbot",
+  "name": "AI SDK Slackbot",
   "description": "A Slackbot built with the AI SDK and Bolt powered by Nitro",
   "version": "0.0.1",
   "author": "Matthew Lewis",
@@ -7,7 +7,7 @@
   "scripts": {
     "build": "nitro build",
     "dev": "nitro dev",
-    "dev:tunnel": "node scripts/dev.tunnel.js",
+    "dev:tunnel": "node scripts/dev.tunnel.mjs",
     "prepare": "nitro prepare",
     "preview": "node .output/server/index.mjs",
     "lint": "biome check .",
@@ -18,10 +18,10 @@
     "@slack/cli-hooks": "^1.2.1",
     "nitropack": "^2.12.4"
   },
-  "packageManager": "pnpm",
+  "packageManager": "pnpm@9.15.0",
   "dependencies": {
     "@slack/bolt": "^4.4.0",
     "@vercel/bolt": "^1.0.9",
-    "ai": "5.0.0-beta.28"
+    "ai": "5.0.0"
   }
 }
