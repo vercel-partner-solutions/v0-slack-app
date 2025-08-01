@@ -6,9 +6,9 @@ An AI-powered assistant built with Slack's Bolt Javascript framework powered by 
 
 ## Features
 - Integrates with Slack's Bolt framework for easy Slack communication
-- Use any LLM with the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) and the AI SDK.
-- Works in all Slack channels (public, private, multi-person DM) and as an assistant in direct messages.
-- Maintains conversation context within both threads and direct messages
+- Use any LLM with the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) and the AI SDK
+- Works in all Slack channels (public, private, multi-person DM) and as an assistant in direct messages
+- Maintains conversation context within different channels
 - Easily extensible architecture to add custom tools (e.g., knowledge search)
 
 ## Prerequisites
