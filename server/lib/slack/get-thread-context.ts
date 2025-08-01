@@ -8,7 +8,7 @@ export const getThreadContext = async (
   const thread = await slack.conversations.replies({
     channel: channel_id,
     ts: thread_ts,
-    limit: 25,
+    limit: 50,
   });
 
   return thread.messages || [];
@@ -22,7 +22,7 @@ export const getThreadContextAsModelMessage = async (
   const messages = await getThreadContext(thread_ts, channel_id);
 
   return messages.map((message) => ({
-    role: message.user === botId ? "assistant" : "user",
+    role: message.bot_id === botId ? "assistant" : "user",
     content: message.text,
   }));
 };
