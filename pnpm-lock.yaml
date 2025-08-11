@@ -14,9 +14,9 @@ importers:
       '@slack/web-api':
         specifier: ^7.9.3
         version: 7.9.3
-      '@vercel/bolt':
-        specifier: ^1.0.9
-        version: 1.0.9(@slack/bolt@4.4.0(@types/express@5.0.3))
+      '@vercel/slack-bolt':
+        specifier: ^0.1.2
+        version: 0.1.2(@slack/bolt@4.4.0(@types/express@5.0.3))
       ai:
         specifier: 5.0.0
         version: 5.0.0(zod@3.25.76)
@@ -939,13 +939,8 @@ packages:
     resolution: {integrity: sha512-pWrTcoFNWuwHlA9CvlfSsGWs14JxfN1TH25zM5L7o0pRLhsoZkDnTsXfQRJBEWJoV5DL0jf+Z+sxiud+K0mq1g==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@vercel/bolt@1.0.9':
-    resolution: {integrity: sha512-bp1AIl6CDs28mAAalfhTxOo6hdOetoFpq4tpyoKbGWtoC/Euv7bWqraAsTv3HEIIjKy4CpTeVCoY5zdKSmrHFg==}
-    peerDependencies:
-      '@slack/bolt': ^4.4.0
-
-  '@vercel/functions@2.2.5':
-    resolution: {integrity: sha512-ghRGwKd0o2QYhv6Zn/dMtnJV7S1ckUwChMFQYMr9RIg4e/cnwF5OgXuyVpoMeGRiDhSMvfOAH50iSwmoDwgZKw==}
+  '@vercel/functions@2.2.8':
+    resolution: {integrity: sha512-Y4G2MEYCVTBtEeo6/+Ydwu5ehwryThJ7or3EM0oZa+oMDLm+z6VchDDc7rNmNIrtTS1ULcUYNqAItjs0mHMgKw==}
     engines: {node: '>= 18'}
     peerDependencies:
       '@aws-sdk/credential-provider-web-identity': '*'
@@ -961,6 +956,11 @@ packages:
   '@vercel/oidc@2.0.0':
     resolution: {integrity: sha512-U0hncpXof7gC9xtmSrjz6vrDqdwJXi8z/zSc9FyS80AoXKfCZtpkBz9gtL3x30Agmpxpwe35P1W2dP9Epa/RGA==}
     engines: {node: '>= 18'}
+
+  '@vercel/slack-bolt@0.1.2':
+    resolution: {integrity: sha512-VW9uQNfmduoYOKWYHACDSzynQXaLJ+8vQEqlnH2YgKMUbGyabU4Eo7jcD3TL0JpqxAvS5Iak0A4zG5UvECcT3g==}
+    peerDependencies:
+      '@slack/bolt': ^4.4.0
 
   '@vue/compiler-core@3.5.18':
     resolution: {integrity: sha512-3slwjQrrV1TO8MoXgy3aynDQ7lslj5UqDxuHnrzHtpON5CBinhWjJETciPngpin/T3OuW3tXUf86tEurusnztw==}
@@ -3746,16 +3746,7 @@ snapshots:
       '@typescript-eslint/types': 8.38.0
       eslint-visitor-keys: 4.2.1
 
-  '@vercel/bolt@1.0.9(@slack/bolt@4.4.0(@types/express@5.0.3))':
-    dependencies:
-      '@slack/bolt': 4.4.0(@types/express@5.0.3)
-      '@slack/logger': 4.0.0
-      '@vercel/functions': 2.2.5
-      tsscmp: 1.0.6
-    transitivePeerDependencies:
-      - '@aws-sdk/credential-provider-web-identity'
-
-  '@vercel/functions@2.2.5':
+  '@vercel/functions@2.2.8':
     dependencies:
       '@vercel/oidc': 2.0.0
 
@@ -3779,6 +3770,15 @@ snapshots:
       - supports-color
 
   '@vercel/oidc@2.0.0': {}
+
+  '@vercel/slack-bolt@0.1.2(@slack/bolt@4.4.0(@types/express@5.0.3))':
+    dependencies:
+      '@slack/bolt': 4.4.0(@types/express@5.0.3)
+      '@slack/logger': 4.0.0
+      '@vercel/functions': 2.2.8
+      tsscmp: 1.0.6
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-provider-web-identity'
 
   '@vue/compiler-core@3.5.18':
     dependencies:

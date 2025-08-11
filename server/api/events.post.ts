@@ -1,20 +1,10 @@
-import { createHandler } from "@vercel/bolt";
+import { createHandler } from "@vercel/slack-bolt";
 import { app, receiver } from "../app";
 
+const handler = createHandler(app, receiver);
+
 export default defineEventHandler(async (event) => {
+  // In v3 of Nitro, we will be able to use the request object directly
   const request = toWebRequest(event);
-
-  const handler = createHandler(app, receiver);
-
-  // This is a workaround to avoid the TypeScript error, this will be fixed in the next version of the package
-  const response = new Response(null, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  const result = await handler(request, response);
-
-  return result;
+  return await handler(request);
 });

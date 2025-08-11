@@ -3,7 +3,7 @@ import { generateText, type ModelMessage } from "ai";
 export const respondToMessage = async (messages: ModelMessage[]) => {
   try {
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: "openai/gpt-5",
       system: `
 			You are SlackBot, a friendly and knowledgeable assistant for Slack users.
 			Respond helpfully, concisely, and professionally to all questions and requests.
