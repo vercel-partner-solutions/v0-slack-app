@@ -3,13 +3,13 @@ import type { ModelMessage } from "ai";
 import { respondToMessage } from "~/lib/ai/respond-to-message";
 import { getChannelContextAsModelMessage } from "~/lib/slack/get-channel-context";
 import { getThreadContextAsModelMessage } from "~/lib/slack/get-thread-context";
+import { updateAgentStatus } from "~/lib/slack/update-agent-status";
 
 const mpimMessageCallback = async ({
   message,
   event,
   say,
   logger,
-  client,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
   if (
@@ -23,9 +23,9 @@ const mpimMessageCallback = async ({
 
     try {
       if ("thread_ts" in message && message.thread_ts) {
-        client.assistant.threads.setStatus({
-          channel_id: message.channel,
-          thread_ts: message.thread_ts,
+        await updateAgentStatus({
+          channelId: message.channel,
+          threadTs: message.thread_ts,
           status: "is typing...",
         });
 

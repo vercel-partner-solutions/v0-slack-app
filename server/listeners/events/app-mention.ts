@@ -3,6 +3,7 @@ import type { ModelMessage } from "ai";
 import { respondToMessage } from "~/lib/ai/respond-to-message";
 import { getChannelContextAsModelMessage } from "~/lib/slack/get-channel-context";
 import { getThreadContextAsModelMessage } from "~/lib/slack/get-thread-context";
+import { updateAgentStatus } from "~/lib/slack/update-agent-status";
 
 const appMentionCallback = async ({
   event,
@@ -15,15 +16,22 @@ const appMentionCallback = async ({
   let threadContext: ModelMessage[] = [];
 
   try {
-    if ("thread_ts" in event && event.thread_ts) {
+    const { channel, thread_ts } = event;
+
+    if (thread_ts) {
+      await updateAgentStatus({
+        channelId: channel,
+        threadTs: thread_ts,
+        status: "is typing...",
+      });
       threadContext = await getThreadContextAsModelMessage(
-        event.thread_ts,
-        event.channel,
+        thread_ts,
+        channel,
         context.botId,
       );
     } else {
       threadContext = await getChannelContextAsModelMessage(
-        event.channel,
+        channel,
         context.botId,
       );
     }
