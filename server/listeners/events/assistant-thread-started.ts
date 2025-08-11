@@ -6,8 +6,6 @@ export const assistantThreadStartedCallback = async ({
   client,
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"assistant_thread_started">) => {
-  logger.debug(`${event.type} event received`);
-
   const { assistant_thread } = event;
 
   try {

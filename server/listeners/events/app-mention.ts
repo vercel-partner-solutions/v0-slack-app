@@ -11,8 +11,6 @@ const appMentionCallback = async ({
   logger,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
-  logger.debug("App mentioned:", JSON.stringify(event, null, 2));
-
   let threadContext: ModelMessage[] = [];
 
   try {

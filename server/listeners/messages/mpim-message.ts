@@ -7,14 +7,11 @@ import { updateAgentStatus } from "~/lib/slack/update-agent-status";
 
 const mpimMessageCallback = async ({
   message,
-  event,
   say,
   logger,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
   if ("text" in message && typeof message.text === "string") {
-    logger.debug("MPIM message event received:", event);
-
     let threadContext: ModelMessage[] = [];
 
     try {

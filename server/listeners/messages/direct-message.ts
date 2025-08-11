@@ -7,14 +7,11 @@ import { updateAgentStatus } from "~/lib/slack/update-agent-status";
 
 const directMessageCallback = async ({
   message,
-  event,
   say,
   logger,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
   if ("text" in message && typeof message.text === "string") {
-    logger.debug("Direct message event received:", event);
-
     let threadContext: ModelMessage[] = [];
 
     try {

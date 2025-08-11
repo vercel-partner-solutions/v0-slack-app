@@ -13,8 +13,6 @@ const groupMessageCallback = async ({
   logger,
 }: SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs) => {
   if ("text" in message && typeof message.text === "string") {
-    logger.debug("Group message event received:", event);
-
     let threadContext: ModelMessage[] = [];
 
     try {

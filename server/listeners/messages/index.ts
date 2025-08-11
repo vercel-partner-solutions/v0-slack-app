@@ -1,5 +1,5 @@
 import type { App } from "@slack/bolt";
-import { onlyChannelType } from "../../lib/slack/utils";
+import { onlyChannelType } from "~/lib/slack/utils";
 import directMessageCallback from "./direct-message";
 import groupMessageCallback from "./group-message";
 import mpimMessageCallback from "./mpim-message";
