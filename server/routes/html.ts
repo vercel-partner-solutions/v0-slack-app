@@ -1,3 +1,6 @@
+const repoUrl =
+  "https://github.com/vercel-partner-solutions/slack-agent-template";
+
 export const html = `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -178,7 +181,7 @@ export const html = `<!DOCTYPE html>
         <script>
             async function fetchReadmeContent() {
                 try {
-                    const response = await fetch('https://api.github.com/repos/vercel-partner-solutions/ai-sdk-slackbot-nitro/readme', {
+                    const response = await fetch('${repoUrl}/readme', {
                         headers: {
                             'Accept': 'application/vnd.github.v3+json',
                         }
@@ -198,7 +201,7 @@ export const html = `<!DOCTYPE html>
                     document.getElementById('content').style.display = 'block';
                     
                     const githubLink = document.getElementById('github-link');
-                    githubLink.href = 'https://github.com/vercel-partner-solutions/ai-sdk-slackbot-nitro';
+                    githubLink.href = '${repoUrl}';
                     githubLink.style.display = 'inline';
     
                      const footer = document.getElementById('footer');
