@@ -181,7 +181,7 @@ export const html = `<!DOCTYPE html>
         <script>
             async function fetchReadmeContent() {
                 try {
-                    const response = await fetch('${repoUrl}/readme', {
+                    const response = await fetch('https://api.github.com/repos/vercel-partner-solutions/slack-agent-template/readme', {
                         headers: {
                             'Accept': 'application/vnd.github.v3+json',
                         }
