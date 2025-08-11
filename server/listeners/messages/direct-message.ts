@@ -1,43 +1,51 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { ModelMessage } from "ai";
 import { respondToMessage } from "~/lib/ai/respond-to-message";
-import { getChannelContextAsModelMessage } from "~/lib/slack/get-channel-context";
-import { getThreadContextAsModelMessage } from "~/lib/slack/get-thread-context";
-import { updateAgentStatus } from "~/lib/slack/update-agent-status";
+import {
+  getChannelContextAsModelMessage,
+  getThreadContextAsModelMessage,
+  updateAgentStatus,
+} from "~/lib/slack/utils";
 
-const directMessageCallback = async ({
+export const directMessageCallback = async ({
   message,
   say,
   logger,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
   if ("text" in message && typeof message.text === "string") {
-    let threadContext: ModelMessage[] = [];
+    let messages: ModelMessage[] = [];
+
+    // @ts-expect-error
+    const { channel, thread_ts } = message;
+    const { botId } = context;
 
     try {
-      if ("thread_ts" in message && message.thread_ts) {
-        await updateAgentStatus({
-          channelId: message.channel,
-          threadTs: message.thread_ts,
+      if (thread_ts) {
+        updateAgentStatus({
+          channelId: channel,
+          threadTs: thread_ts,
           status: "is typing...",
         });
 
-        threadContext = await getThreadContextAsModelMessage(
-          message.thread_ts,
-          message.channel,
-          context.botId,
+        messages = await getThreadContextAsModelMessage(
+          thread_ts,
+          channel,
+          botId,
         );
       } else {
-        threadContext = await getChannelContextAsModelMessage(
-          message.channel,
-          context.botId,
-        );
+        messages = await getChannelContextAsModelMessage(channel, botId);
       }
     } catch (error) {
       logger.error("Failed to get context, using message as fallback:", error);
-      threadContext = [{ role: "user", content: message.text }];
+      messages = [{ role: "user", content: message.text }];
     }
-    const response = await respondToMessage(threadContext);
+
+    const response = await respondToMessage({
+      messages,
+      channel,
+      thread_ts,
+    });
 
     await say({
       text: response,
@@ -47,5 +55,3 @@ const directMessageCallback = async ({
     logger.debug("Direct message received with no text");
   }
 };
-
-export default directMessageCallback;
