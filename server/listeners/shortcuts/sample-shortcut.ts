@@ -72,7 +72,7 @@ const sampleShortcutCallback = async ({
       },
     });
   } catch (error) {
-    logger.error(error);
+    logger.error("Shortcut handler failed:", error);
   }
 };
 

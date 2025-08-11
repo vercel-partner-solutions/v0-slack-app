@@ -32,16 +32,19 @@ const appMentionCallback = async ({
     } else {
       messages = await getChannelContextAsModelMessage(channel, context.botId);
     }
-  } catch (error) {
-    logger.error("Failed to get context, using message as fallback:", error);
-    messages = [{ role: "user", content: event.text }];
-  }
 
-  const response = await respondToMessage({ messages });
-  await say({
-    text: response,
-    thread_ts: event.thread_ts || event.ts,
-  });
+    const response = await respondToMessage({ messages });
+    await say({
+      text: response,
+      thread_ts: event.thread_ts || event.ts,
+    });
+  } catch (error) {
+    logger.error("app_mention handler failed:", error);
+    await say({
+      text: "Sorry, something went wrong processing your message. Please try again.",
+      thread_ts: event.thread_ts || event.ts,
+    });
+  }
 };
 
 export default appMentionCallback;

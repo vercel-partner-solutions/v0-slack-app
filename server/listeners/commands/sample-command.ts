@@ -10,8 +10,19 @@ export const sampleCommandCallback = async ({
 }: AllMiddlewareArgs & SlackCommandMiddlewareArgs) => {
   try {
     await ack();
-    await respond("Responding to the sample command!");
+    await respond({
+      text: "Responding to the sample command!",
+      response_type: "ephemeral",
+    });
   } catch (error) {
-    logger.error(error);
+    logger.error("Slash command handler failed:", error);
+    try {
+      await respond({
+        text: "Sorry, something went wrong handling that command.",
+        response_type: "ephemeral",
+      });
+    } catch (respondError) {
+      logger.error("Also failed to send error response:", respondError);
+    }
   }
 };

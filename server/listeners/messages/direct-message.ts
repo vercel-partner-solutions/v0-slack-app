@@ -13,32 +13,27 @@ export const directMessageCallback = async ({
   logger,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
-  if ("text" in message && typeof message.text === "string") {
-    let messages: ModelMessage[] = [];
+  let messages: ModelMessage[] = [];
 
-    // @ts-expect-error
-    const { channel, thread_ts } = message;
-    const { botId } = context;
+  // @ts-expect-error
+  const { channel, thread_ts } = message;
+  const { botId } = context;
 
-    try {
-      if (thread_ts) {
-        updateAgentStatus({
-          channelId: channel,
-          threadTs: thread_ts,
-          status: "is typing...",
-        });
+  try {
+    if (thread_ts) {
+      updateAgentStatus({
+        channelId: channel,
+        threadTs: thread_ts,
+        status: "is typing...",
+      });
 
-        messages = await getThreadContextAsModelMessage(
-          thread_ts,
-          channel,
-          botId,
-        );
-      } else {
-        messages = await getChannelContextAsModelMessage(channel, botId);
-      }
-    } catch (error) {
-      logger.error("Failed to get context, using message as fallback:", error);
-      messages = [{ role: "user", content: message.text }];
+      messages = await getThreadContextAsModelMessage(
+        thread_ts,
+        channel,
+        botId,
+      );
+    } else {
+      messages = await getChannelContextAsModelMessage(channel, botId);
     }
 
     const response = await respondToMessage({
@@ -51,7 +46,11 @@ export const directMessageCallback = async ({
       text: response,
       thread_ts: message.ts,
     });
-  } else {
-    logger.debug("Direct message received with no text");
+  } catch (error) {
+    logger.error("DM handler failed:", error);
+    await say({
+      text: "Sorry, something went wrong processing your message. Please try again.",
+      thread_ts: message.ts,
+    });
   }
 };

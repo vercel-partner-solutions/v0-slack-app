@@ -51,11 +51,20 @@ export const updateAgentStatus = async ({
   threadTs: string;
   status: string;
 }) => {
-  await app.client.assistant.threads.setStatus({
-    channel_id: channelId,
-    thread_ts: threadTs,
-    status,
-  });
+  try {
+    await app.client.assistant.threads.setStatus({
+      channel_id: channelId,
+      thread_ts: threadTs,
+      status,
+    });
+  } catch (error) {
+    app.logger.error("Failed to update agent status", {
+      channelId,
+      threadTs,
+      status,
+      error,
+    });
+  }
 };
 
 /**

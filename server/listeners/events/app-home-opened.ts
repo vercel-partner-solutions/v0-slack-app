@@ -32,7 +32,7 @@ const appHomeOpenedCallback = async ({
       },
     });
   } catch (error) {
-    logger.error(error);
+    logger.error("app_home_opened handler failed:", error);
   }
 };
 

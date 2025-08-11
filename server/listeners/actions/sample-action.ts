@@ -72,7 +72,7 @@ const sampleActionCallback = async ({
       },
     });
   } catch (error) {
-    logger.error(error);
+    logger.error("Block action handler failed:", error);
   }
 };
 
