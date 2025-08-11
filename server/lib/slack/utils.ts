@@ -1,7 +1,7 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 
 export const onlyChannelType =
-  (type: "im" | "group" | "mpim") =>
+  (type: SlackEventMiddlewareArgs<"message">["event"]["channel_type"]) =>
   async ({
     event,
     next,
