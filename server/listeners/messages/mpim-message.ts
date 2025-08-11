@@ -12,11 +12,7 @@ const mpimMessageCallback = async ({
   logger,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
-  if (
-    event.channel_type === "mpim" &&
-    "text" in message &&
-    typeof message.text === "string"
-  ) {
+  if ("text" in message && typeof message.text === "string") {
     logger.debug("MPIM message event received:", event);
 
     let threadContext: ModelMessage[] = [];

@@ -12,11 +12,7 @@ const directMessageCallback = async ({
   logger,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
-  if (
-    event.channel_type === "im" &&
-    "text" in message &&
-    typeof message.text === "string"
-  ) {
+  if ("text" in message && typeof message.text === "string") {
     logger.debug("Direct message event received:", event);
 
     let threadContext: ModelMessage[] = [];
