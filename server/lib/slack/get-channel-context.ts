@@ -1,5 +1,5 @@
 import type { ModelMessage } from "ai";
-import slack from "./client";
+import { slack } from "./client";
 
 export const getChannelContext = async (channel_id: string) => {
   const history = await slack.conversations.history({

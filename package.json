@@ -7,7 +7,7 @@
   "scripts": {
     "build": "nitro build",
     "dev": "nitro dev",
-    "dev:tunnel": "node scripts/dev.tunnel.mjs",
+    "dev:tunnel": "node scripts/dev.tunnel.js",
     "prepare": "nitro prepare",
     "preview": "node .output/server/index.mjs",
     "lint": "biome check .",

@@ -1,5 +1,5 @@
 import type { ModelMessage } from "ai";
-import slack from "./client";
+import { slack } from "./client";
 
 export const getThreadContext = async (
   thread_ts: string,
