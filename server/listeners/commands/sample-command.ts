@@ -3,7 +3,7 @@ import type {
   SlackCommandMiddlewareArgs,
 } from "@slack/bolt";
 
-const sampleCommandCallback = async ({
+export const sampleCommandCallback = async ({
   ack,
   respond,
   logger,
@@ -15,5 +15,3 @@ const sampleCommandCallback = async ({
     logger.error(error);
   }
 };
-
-export default sampleCommandCallback;
