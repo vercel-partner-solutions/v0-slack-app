@@ -1,4 +1,5 @@
-import { generateText, stepCountIs, type ModelMessage } from "ai";
+import { generateText, type ModelMessage, stepCountIs } from "ai";
+import { app } from "~/app";
 import { updateChatTitleTool } from "./tools";
 
 interface RespondToMessageOptions {
@@ -40,7 +41,7 @@ export const respondToMessage = async ({
     });
     return text;
   } catch (error) {
-    console.error(error);
+    app.logger.error(error);
     return "Sorry, I encountered an error while processing your message.";
   }
 };

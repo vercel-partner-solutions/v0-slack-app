@@ -1,5 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
+  "plugins": [".biome/no-console-prefer-logger.grit"],
   "vcs": {
     "enabled": false,
     "clientKind": "git",
@@ -9,7 +10,6 @@
     "ignoreUnknown": false,
     "includes": [
       "server/**/*.{ts,js}",
-      "scripts/**/*.{ts,js}",
       "manifest.json",
       "nitro.config.ts",
       "tsconfig.json",
@@ -40,8 +40,22 @@
     "enabled": true,
     "actions": {
       "source": {
-        "organizeImports": "off"
+        "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["scripts/**/*.{ts,js}"],
+      "linter": {
+        "enabled": true,
+        "rules": {
+          "recommended": true,
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ]
 }
