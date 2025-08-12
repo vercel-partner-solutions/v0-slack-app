@@ -1,6 +1,6 @@
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-partner-solutions%2Fai-sdk-slackbot-nitro&env=SLACK_BOT_TOKEN,SLACK_SIGNING_SECRET&project-name=ai-sdk-slackbot&repository-name=vercel-slackbot-with-bolt&demo-title=Vercel%20Slackbot%20with%20Bolt&demo-description=A%20Slackbot%20built%20using%20the%20Slack%20Bolt%20and%20Nitro%20frameworks.)
 
-# Vercel Slackbot with Bolt
+# Slack Agent with Bolt
 An AI-powered assistant built with Slack's Bolt Javascript framework powered by the AI SDK by Vercel.
 
 ## Features
@@ -12,9 +12,7 @@ An AI-powered assistant built with Slack's Bolt Javascript framework powered by 
 
 ## Prerequisites
 
-### Required
 - **Node.js 18+** - [Download here](https://nodejs.org/)
-- **pnpm** - This project uses pnpm as the package manager. Install with `npm install -g pnpm`
 - **Slack workspace** - You need a workspace where you have permission to install apps
   - Create a new workspace [here](https://slack.com/create)
   - Or use a Slack developer sandbox [here](https://api.slack.com/developer-program)
@@ -23,41 +21,15 @@ An AI-powered assistant built with Slack's Bolt Javascript framework powered by 
 
 ## Setup
 
-### 1. Clone and Initialize
+### 1. Clone and Initialize Slack App
 ```bash
-git clone https://github.com/vercel/ai-sdk-slackbot
-cd nitro-app
-pnpm install
+slack create --template clone https://github.com/vercel-partner-solutions/slack-agent-template
 ```
 
-### 2. Initialize Slack App
-```bash
-slack init
-```
-> **Note**: This command may hang due to forcing `npm install` ([known issue](https://github.com/slackapi/slack-cli/issues/170)). Once you see a `./slack` directory with `hooks.json` and `config.json`, you can exit with `Ctrl/Cmd + C`.
-
-### 3. Configure Slack Hooks
-Update your start command in `.slack/hooks.json`:
-```json
-{
-  "hooks": {
-    "get-hooks": "npx -q --no-install -p @slack/cli-hooks slack-cli-get-hooks",
-    "start": "pnpm dev"
-  }
-}
-```
-### 4. Configure Local Manifest
+### 2. Link to existing Slack App
 Update `.slack/config.json` to use your local app manifest:
-```json
-{
-  "manifest": {
-    "source": "local"
-  },
-  // the slack init command will add your project ID.
-  "project_id": "<your-slack-project-id>"
-  
-}
-
+```bash
+slack app link
 ```
 
 ### 5. Create and Install Slack App
