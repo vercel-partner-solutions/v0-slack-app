@@ -1,5 +1,5 @@
 
-# Slack Bolt with Nitro Template App
+# Slack Agent Template
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?demo-description=This%20is%20a%20generic%20Slack%20Agent%20template%20app%20built%20with%20Bolt%20for%20JavaScript%20%28TypeScript%29%20and%20the%20Nitro%20framework.%20Use%20this%20template%20to%20build%20Slack%20agent%20apps%20quickly%20and%20easily.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2FSs9t7RkKlPtProrbDhZFM%2F0d11b9095ecf84c87a68fbdef6f12ad1%2FFrame__1_.png&demo-title=Slack%20Bolt%20with%20Nitro&demo-url=https%3A%2F%2Fgithub.com%2Fvercel-partner-solutions%2Fslack-agent-template.git&env=SLACK_SIGNING_SECRET%2CSLACK_BOT_TOKEN&envDescription=These%20environment%20variables%20are%20required%20to%20deploy%20your%20Slack%20agent%20app%20to%20Vercel&envLink=https%3A%2F%2Fapi.slack.com%2Fapps&from=templates&project-name=Slack%20Bolt%20with%20Nitro&repository-name=slack-bolt-with-nitro&repository-url=https%3A%2F%2Fgithub.com%2Fvercel-partner-solutions%2Fslack-agent-template.git&skippable-integrations=1&teamSlug=matthew-lewis-projects-c7bdd331)
 
 This is a Slack Agent template built with Bolt for JavaScript (TypeScript) and the Nitro server framework.
