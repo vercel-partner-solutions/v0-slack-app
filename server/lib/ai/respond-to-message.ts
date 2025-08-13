@@ -118,8 +118,7 @@ export const respondToMessage = async ({
       },
       onStepFinish: ({ toolCalls }) => {
         if (toolCalls.length > 0) {
-          app.logger.info("Tool calls:", toolCalls);
-          app.logger.info(
+          app.logger.debug(
             "tool call args:",
             toolCalls.map((call) => call.input),
           );
