@@ -35,7 +35,6 @@ This is a Slack Agent template built with Bolt for JavaScript (TypeScript) and t
 2. Select your Slack team in the terminal
 3. Copy your App ID from the app you just created
 4. Select `Local` when prompted
-```
 5. Open your [`config.json`](./.slack/config.json) file under `/.slack/config.json` and update your manifest source to `local`.
 ```json
 {
