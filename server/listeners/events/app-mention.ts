@@ -18,13 +18,13 @@ const appMentionCallback = async ({
     let messages: ModelMessage[] = [];
     if (thread_ts) {
       updateAgentStatus({
-        channelId: channel,
-        threadTs: thread_ts,
+        channel,
+        thread_ts,
         status: "is typing...",
       });
       messages = await getThreadContextAsModelMessage({
-        channel_id: channel,
-        thread_ts,
+        channel,
+        ts: thread_ts,
         botId: context.botId,
       });
     } else {

@@ -11,9 +11,12 @@ export const getChannelMessagesTool = tool({
   inputSchema: z.object({}),
   execute: async (_, { experimental_context }) => {
     try {
-      const { channelId, botId } = experimental_context as ExperimentalContext;
+      const { channel, botId } = experimental_context as ExperimentalContext;
 
-      return await getChannelContextAsModelMessage(channelId, botId);
+      return await getChannelContextAsModelMessage({
+        channel,
+        botId,
+      });
     } catch (error) {
       app.logger.error("Failed to get channel messages:", error);
       return [];

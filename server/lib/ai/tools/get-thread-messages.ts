@@ -11,12 +11,12 @@ export const getThreadMessagesTool = tool({
   inputSchema: z.object({}),
   execute: async (_, { experimental_context }) => {
     try {
-      const { channelId, threadTs, botId } =
+      const { channel, thread_ts, botId } =
         experimental_context as ExperimentalContext;
 
       return await getThreadContextAsModelMessage({
-        thread_ts: threadTs,
-        channel_id: channelId,
+        channel,
+        ts: thread_ts,
         botId,
       });
     } catch (error) {

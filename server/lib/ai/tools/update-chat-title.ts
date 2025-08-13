@@ -11,19 +11,17 @@ export const updateChatTitleTool = tool({
   }),
   execute: async ({ title }, { experimental_context }) => {
     try {
-      const { channelId, threadTs } =
+      const { channel, thread_ts } =
         experimental_context as ExperimentalContext;
 
-      if (!channelId || !threadTs) {
-        app.logger.warn(
-          "update_chat_title skipped: missing channelId/threadTs",
-        );
+      if (!channel || !thread_ts) {
+        app.logger.warn("update_chat_title skipped: missing channel/thread_ts");
         return;
       }
 
       app.client.assistant.threads.setTitle({
-        channel_id: channelId,
-        thread_ts: threadTs,
+        channel_id: channel,
+        thread_ts,
         title,
       });
     } catch (error) {

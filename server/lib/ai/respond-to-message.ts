@@ -16,8 +16,8 @@ interface RespondToMessageOptions {
 }
 
 export type ExperimentalContext = {
-  channelId?: string;
-  threadTs?: string;
+  channel?: string;
+  thread_ts?: string;
   botId?: string;
 };
 
@@ -30,7 +30,7 @@ export const respondToMessage = async ({
 }: RespondToMessageOptions) => {
   try {
     const { text } = await generateText({
-      model: "openai/gpt-5-nano",
+      model: "openai/gpt-4o-mini",
       system: `
 			You are Slack Agent, a friendly and professional agent for Slack.
       Always gather context from Slack before asking the user for clarification.
@@ -118,12 +118,16 @@ export const respondToMessage = async ({
       },
       onStepFinish: ({ toolCalls }) => {
         if (toolCalls.length > 0) {
-          app.logger.debug("Tool calls:", toolCalls);
+          app.logger.info("Tool calls:", toolCalls);
+          app.logger.info(
+            "tool call args:",
+            toolCalls.map((call) => call.input),
+          );
         }
       },
       experimental_context: {
-        channelId: channel,
-        threadTs: thread_ts,
+        channel,
+        thread_ts,
         botId,
       } as ExperimentalContext,
     });

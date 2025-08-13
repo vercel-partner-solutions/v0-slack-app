@@ -18,18 +18,21 @@ export const updateAgentStatusTool = tool({
   }),
   execute: async ({ status }, { experimental_context }) => {
     try {
-      const { channelId, threadTs } =
+      const { channel, thread_ts } =
         experimental_context as ExperimentalContext;
 
-      if (threadTs) {
-        app.client.assistant.threads.setStatus({
-          channel_id: channelId,
-          thread_ts: threadTs,
-          status,
-        });
-      } else {
-        app.logger.warn("update_agent_status called without thread_ts");
+      if (!channel || !thread_ts) {
+        app.logger.warn(
+          "update_agent_status skipped: missing channel/thread_ts",
+        );
+        return;
       }
+
+      app.client.assistant.threads.setStatus({
+        channel_id: channel,
+        thread_ts,
+        status,
+      });
     } catch (error) {
       app.logger.error("Failed to update agent status:", error);
     }
