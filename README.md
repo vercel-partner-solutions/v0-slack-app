@@ -74,7 +74,7 @@ This is a Slack Agent template built with Bolt for JavaScript (TypeScript) and t
 
 [`/app.ts`](./server/app.ts) is the entry point of the application. This file is kept minimal and primarily serves to route inbound requests.
 
-[`/server/listeners`](./server/listeners)
+### [`/server/listeners`](./server/listeners)
 
 Every incoming request is routed to a "listener". Inside this directory, we group each listener based on the Slack Platform feature used, so [`/listeners/shortcuts`](./server/listeners/shortcuts/index.ts) handles incoming [Shortcuts](https://api.slack.com/interactivity/shortcuts) requests, [`/listeners/views`](./server/listeners/views/index.ts) handles [View submissions](https://api.slack.com/reference/interaction-payloads/views#view_submission) and so on.
 
