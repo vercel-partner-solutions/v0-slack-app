@@ -70,14 +70,14 @@ This is a Slack Agent template built with Bolt for JavaScript (TypeScript) and t
 
 [`manifest.json`](./manifest.json) is a configuration for Slack apps. With a manifest, you can create an app with a pre-defined configuration, or adjust the configuration of an existing app.
 
-### [`/server/app.ts`](./src/app.ts)
+### [`/server/app.ts`](./server/app.ts)
 
-[`/app.ts`](./src/app.ts) is the entry point of the application. This file is kept minimal and primarily serves to route inbound requests.
+[`/app.ts`](./server/app.ts) is the entry point of the application. This file is kept minimal and primarily serves to route inbound requests.
 
-[`/server/listeners`](./src/listeners)
+[`/server/listeners`](./server/listeners)
 
-Every incoming request is routed to a "listener". Inside this directory, we group each listener based on the Slack Platform feature used, so [`/listeners/shortcuts`](./src/listeners/shortcuts/index.ts) handles incoming [Shortcuts](https://api.slack.com/interactivity/shortcuts) requests, [`/listeners/views`](./src/listeners/views/index.ts) handles [View submissions](https://api.slack.com/reference/interaction-payloads/views#view_submission) and so on.
+Every incoming request is routed to a "listener". Inside this directory, we group each listener based on the Slack Platform feature used, so [`/listeners/shortcuts`](./server/listeners/shortcuts/index.ts) handles incoming [Shortcuts](https://api.slack.com/interactivity/shortcuts) requests, [`/listeners/views`](./server/listeners/views/index.ts) handles [View submissions](https://api.slack.com/reference/interaction-payloads/views#view_submission) and so on.
 
-### [`/server`](./src/server)
+### [`/server`](./server)
 
-This is your nitro server directory. Inside you have an [`api`](./src/server/api) folder that contains a [`events.post.ts`](./src/server/api/events.post.ts) file. This matches the request URL's defined in your [`manifest.json`](./manifest.json) file. Nitro uses file based routing for incoming requests. You can learn more about this [here](https://nitro.build/guide/routing).
+This is your nitro server directory. Inside you have an [`api`](./server/api) folder that contains a [`events.post.ts`](./server/api/events.post.ts) file. This matches the request URL's defined in your [`manifest.json`](./manifest.json) file. Nitro uses file based routing for incoming requests. You can learn more about this [here](https://nitro.build/guide/routing).
