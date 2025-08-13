@@ -1,142 +1,84 @@
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-partner-solutions%2Fai-sdk-slackbot-nitro&env=SLACK_BOT_TOKEN,SLACK_SIGNING_SECRET&project-name=ai-sdk-slackbot&repository-name=vercel-slackbot-with-bolt&demo-title=Vercel%20Slackbot%20with%20Bolt&demo-description=A%20Slackbot%20built%20using%20the%20Slack%20Bolt%20and%20Nitro%20frameworks.)
 
-# Slack Agent with Bolt
-An AI-powered assistant built with Slack's Bolt Javascript framework powered by the AI SDK by Vercel.
+# Slack Bolt with Nitro Template App
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?demo-description=This%20is%20a%20generic%20Slack%20Agent%20template%20app%20built%20with%20Bolt%20for%20JavaScript%20%28TypeScript%29%20and%20the%20Nitro%20framework.%20Use%20this%20template%20to%20build%20Slack%20agent%20apps%20quickly%20and%20easily.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2FSs9t7RkKlPtProrbDhZFM%2F0d11b9095ecf84c87a68fbdef6f12ad1%2FFrame__1_.png&demo-title=Slack%20Bolt%20with%20Nitro&demo-url=https%3A%2F%2Fgithub.com%2Fvercel-partner-solutions%2Fslack-agent-template.git&env=SLACK_SIGNING_SECRET%2CSLACK_BOT_TOKEN&envDescription=These%20environment%20variables%20are%20required%20to%20deploy%20your%20Slack%20agent%20app%20to%20Vercel&envLink=https%3A%2F%2Fapi.slack.com%2Fapps&from=templates&project-name=Slack%20Bolt%20with%20Nitro&repository-name=slack-bolt-with-nitro&repository-url=https%3A%2F%2Fgithub.com%2Fvercel-partner-solutions%2Fslack-agent-template.git&skippable-integrations=1&teamSlug=matthew-lewis-projects-c7bdd331)
 
-## Features
-- Integrates with Slack's Bolt framework for easy Slack communication
-- Use any LLM with the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) and the AI SDK
-- Works in all Slack channels (public, private, multi-person DM) and as an assistant in direct messages
-- Maintains conversation context within different channels
-- Easily extensible architecture to add custom tools (e.g., knowledge search)
+This is a Slack Agent template built with Bolt for JavaScript (TypeScript) and the Nitro server framework.
 
 ## Prerequisites
-
-- **Node.js 18+** - [Download here](https://nodejs.org/)
+- **Node.js 22+** - [Download here](https://nodejs.org/)
 - **Slack workspace** - You need a workspace where you have permission to install apps
   - Create a new workspace [here](https://slack.com/create)
   - Or use a Slack developer sandbox [here](https://api.slack.com/developer-program)
 - **Slack CLI** - [Installation guide](https://tools.slack.dev/slack-cli/guides/installing-the-slack-cli-for-mac-and-linux)
 - **ngrok** - [Download here](https://ngrok.com/downloads)
 
-## Setup
+## Installation
+#### Clone and initialize Slack App
+   ```bash
+   slack create --template https://github.com/vercel-partner-solutions/slack-agent-template.git
+   ```
 
-### 1. Clone and Initialize Slack App
-```bash
-slack create --template clone https://github.com/vercel-partner-solutions/slack-agent-template
+#### Create a Slack App
+
+1. Open [https://api.slack.com/apps/new](https://api.slack.com/apps/new) and choose "From an app manifest"
+2. Choose the workspace you want to install the application to
+3. Copy the contents of [manifest.json](./manifest.json) into the text box that says `*Paste your manifest code here*` (within the JSON tab) and click _Next_
+4. Review the configuration and click _Create_
+5. From the _Basic Information_ tab, copy your _Slack Signing Secret_ into your `.env` file under `SLACK_SIGNING_SECRET`.
+6. Open the _Install App_ tab on the left menu. Click _Install to <Workspace_Name>_ and _Allow_ on the screen that follows.
+7. On the following screen, copy the _Bot User OAuth Token_ into your `.env` file under `SLACK_BOT_TOKEN`.
+
+
+#### Prepare for Local Development
+
+1. In the terminal run `slack app link`
+2. Select your Slack team in the terminal
+3. Copy your App ID from the app you just created
+4. Select `Local` when prompted
 ```
-
-### 2. Link to existing Slack App
-Update `.slack/config.json` to use your local app manifest:
-```bash
-slack app link
+5. Open your [`config.json`](./.slack/config.json) file under `/.slack/config.json` and update your manifest source to `local`.
+```json
+{
+  "manifest": {
+    "source": "local"
+  },
+  "project_id": "<project-id-added-by-slack-cli>"
+}
 ```
+6. Start your local server with automatic tunneling using the `pnpm dev:tunnel` command. You can also use the generic `slack run` command if you do not want automatic tunneling and manifest updates. If prompted, select the workspace you'd like to grant access to. Select `yes` when asked _Update app settings with changes to the local manifest?_.
 
-### 5. Create and Install Slack App
-```bash
-slack app install
-```
-> ⚠️ **Important**: Installing on a free workspace will cause **AI Assistant** feature errors. Use a Pro workspace or [developer sandbox](https://api.slack.com/developer-program).
+7. Open your Slack workspace and add your new Slack Agent to a channel. Your Slack Agent should respond whenever it's tagged in a message or sent a DM.
 
-### 6. Start Development Server
-```bash
-pnpm run dev:tunnel
-```
-Slack will prompt you to create another app. This will be the app you use for local development.
-
-### 7. Configure Environment Variables
-Create a `.env` file in your project root with the following variables:
-
-```env
-SLACK_SIGNING_SECRET="your_signing_secret_here"
-SLACK_BOT_TOKEN="xoxb-your-bot-token-here"
-AI_GATEWAY_API_KEY="your_ai_gateway_key_here"
-```
-
-**Get your Slack credentials:**
-1. Go to [Slack App Settings](https://api.slack.com/apps) and select your local app
-2. **Basic Information** → Copy **Signing Secret** → Add to `SLACK_SIGNING_SECRET`
-3. **Install App** → Copy **Bot User OAuth Token** → Add to `SLACK_BOT_TOKEN`
-
-**Get your AI Gateway API Key:**
-- Create one at [Vercel AI Gateway](https://vercel.com/ai/api-keys)
-
-**Alternative - Using Vercel OIDC Token:**
-```bash
-vercel link
-vercel env pull
-```
-
-## Usage
-
-### Start Development Server (Recommended)
-```bash
-pnpm run dev:tunnel
-```
-This starts your app with automatic ngrok tunneling and local manifest updates.
-
-### Alternative: Manual Development
-```bash
-slack run
-```
-Starts the app without automatic tunnel creation. You will have to manually update your app's `manifest.json` file.
-
-### Using the Bot
-1. Invite the bot to any channel: `@YourBotName`
-2. The bot will respond in public and private channels when `@` mentioned.
-3. The bot will respond to any messages sent in DMs (`im`), multi-person DMs (`mpim`) and group messages (`group`) that it is added to.
-
-### Enable the AI Assistant feature
-1. Open your Slack workspace preferences (`ctrl/cmd` + `,`)
-2. Open the **Navigation** tab and scroll to **App agents & assistants**
-3. Toggle the AI Assistant you would like to enable
-4. In the top right of your Slack workspace you will now see an icon to toggle a sidebar where you can interact with your AI Assistant
+## Deploy to Vercel
+1. Create a new Vercel project [here](https://www.vercel.com/new) or select _Add new..._ and _project_ from the Vercel dashboard
+2. On the next screen, select *Import* next to your app repository but do *not* click _Deploy_
+3. Create a new Slack app for Production. Open [https://api.slack.com/apps/new](https://api.slack.com/apps/new) and choose "From an app manifest"
+4. Copy the contents of [manifest.json](./manifest.json) into the text box that says `*Paste your manifest code here*` (within the JSON tab) and click _Next_ and _Create_
+5. From the _Basic Information_ tab, copy your _Slack Signing Secret_ into the Environment Variables dropdown on your new Vercel project window as `SLACK_SIGNING_SECRET`
+6. On your Slack app window, open the _Install App_ tab on the left menu. Click _Install to <Workspace_Name>_ and _Allow_ on the screen that follows. Copy the _Bot User OAuth Token_
+7. Open your new Vercel project window and paste this value as `SLACK_BOT_TOKEN` in the environment variables dropdown
+8. Click _Deploy_
+9. Once the deployment is complete, click _Continue to Dashboard_
+10. Copy your production domain URL, seen under  _Domains_ on the _Overview_ tab
+11. Open your Slack app settings and click _App Manifest_
+12. Update the _url_ and _request_url_ fields of your App Manifest to the production domain. Make sure the `/api/events` path is preserved
+13. At the top of the page, you will be prompted to verify the new URL
+14. Your production app is now deployed and ready
 
 ## Project Structure
 
-### `manifest.json`
+### [`manifest.json`](./manifest.json)
 
-`manifest.json` is a configuration for Slack apps. With a manifest, you can create an app with a pre-defined configuration, or adjust the configuration of an existing app.
+[`manifest.json`](./manifest.json) is a configuration for Slack apps. With a manifest, you can create an app with a pre-defined configuration, or adjust the configuration of an existing app.
 
-### `/server/app.ts`
+### [`/server/app.ts`](./src/app.ts)
 
-`/server/app.ts` is the entry point for the application and is the file you'll run to start the server. This project aims to keep this file as thin as possible, primarily using it as a way to route inbound requests.
+[`/app.ts`](./src/app.ts) is the entry point of the application. This file is kept minimal and primarily serves to route inbound requests.
 
-### `/server/listeners`
+[`/server/listeners`](./src/listeners)
 
-Every incoming request is routed to a "listener". Inside this directory, we group each listener based on the Slack Platform feature used, so `/listeners/shortcuts` handles incoming [Shortcuts](https://api.slack.com/interactivity/shortcuts) requests, `/listeners/views` handles [View submissions](https://api.slack.com/reference/interaction-payloads/views#view_submission) and so on.
+Every incoming request is routed to a "listener". Inside this directory, we group each listener based on the Slack Platform feature used, so [`/listeners/shortcuts`](./src/listeners/shortcuts/index.ts) handles incoming [Shortcuts](https://api.slack.com/interactivity/shortcuts) requests, [`/listeners/views`](./src/listeners/views/index.ts) handles [View submissions](https://api.slack.com/reference/interaction-payloads/views#view_submission) and so on.
 
-### `/server/api/events.post.ts`
+### [`/server`](./src/server)
 
-`events.ts` creates a serverless function which will listen to all incoming **POST** requests from your Slack workspace and properly route them to your `app.ts` file which will then respond to the incoming request.
-
-### `/scripts/dev.tunnel.js`
-
-`dev.tunnel.js` is a helper command to improve the local developer experience. It will automatically create an `ngrok` tunnel and update your local app `manifest.json` to use the tunnel url. You can use `slack run` to start your app without the automatic tunnel creation.
-
-## Troubleshooting
-
-### Common Issues
-
-**This workspace is not eligible for the next generation Slack platform.**
-- Solution: Upgrade to Slack Pro or use a [developer sandbox](https://api.slack.com/developer-program)
-
-**`slack init` command hangs**
-- This is a [known issue](https://github.com/slackapi/slack-cli/issues/170)
-- Wait for `.slack/` directory to appear, then exit with `Ctrl/Cmd + C`
-
-**Bot not responding**
-- Check your `.env` file has correct values
-- Verify bot token starts with `xoxb-`
-- Ensure the bot is invited to the channel
-- Check the development server is running
-
-**Ngrok tunnel issues**
-- Try restarting with `pnpm run dev:tunnel`
-- Check if ngrok is properly installed
-- Verify your ngrok account limits
-
-**Environment variables not loading**
-- Ensure `.env` file is in project root
-- Restart your development server
-- Check for typos in variable names
+This is your nitro server directory. Inside you have an [`api`](./src/server/api) folder that contains a [`events.post.ts`](./src/server/api/events.post.ts) file. This matches the request URL's defined in your [`manifest.json`](./manifest.json) file. Nitro uses file based routing for incoming requests. You can learn more about this [here](https://nitro.build/guide/routing).
