@@ -1,8 +1,11 @@
-  // CommonJS variant
-  const { spawn } = require("node:child_process");
-  const fs = require("node:fs");
-  const path = require("node:path");
-  
+import { spawn, type ChildProcess } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const MANIFEST_PATH = path.join(__dirname, "..", "manifest.json");
 const NGROK_PORT = Number.parseInt(
   process.env.NGROK_PORT ?? process.env.PORT ?? "3000",
@@ -11,18 +14,15 @@ const NGROK_PORT = Number.parseInt(
 const NGROK_STARTUP_DELAY = 3000;
 const NGROK_API_URL = "http://localhost:4040/api/tunnels";
 
-let ngrokProcess = null;
-let slackProcess = null;
+let ngrokProcess: ChildProcess | null = null;
+let slackProcess: ChildProcess | null = null;
 let isShuttingDown = false;
 let ngrokStartedByUs = false;
 
-function augmentPathForBrew() {
-  const pathsToEnsure = [];
-  // Apple Silicon
+function augmentPathForBrew(): void {
+  const pathsToEnsure: string[] = [];
   pathsToEnsure.push("/opt/homebrew/bin");
-  // Intel macOS
   pathsToEnsure.push("/usr/local/bin");
-  // Common local bin
   pathsToEnsure.push("/usr/bin", "/bin", "/usr/sbin", "/sbin");
 
   const currentPath = process.env.PATH || "";
@@ -35,12 +35,12 @@ function augmentPathForBrew() {
   process.env.PATH = Array.from(pathSegments).join(path.delimiter);
 }
 
-function checkBinaryAvailable(command, args = ["--version"]) {
+function checkBinaryAvailable(command: string, args: string[] = ["--version"]): Promise<boolean> {
   return new Promise((resolve) => {
     try {
       const probe = spawn(command, args, { stdio: "ignore", shell: false });
       let resolved = false;
-      probe.once("error", (err) => {
+      probe.once("error", (err: NodeJS.ErrnoException) => {
         if (!resolved) {
           resolved = true;
           if (err && err.code === "ENOENT") resolve(false);
@@ -53,7 +53,6 @@ function checkBinaryAvailable(command, args = ["--version"]) {
           resolve(true);
         }
       });
-      // If process exits quickly, still treat as available
       probe.once("exit", () => {
         if (!resolved) {
           resolved = true;
@@ -66,7 +65,7 @@ function checkBinaryAvailable(command, args = ["--version"]) {
   });
 }
 
-function cleanup() {
+function cleanup(): void {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
@@ -93,7 +92,7 @@ function cleanup() {
 process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
 
-async function updateManifest(ngrokUrl) {
+async function updateManifest(ngrokUrl: string): Promise<boolean> {
   try {
     console.log("📝 Updating manifest.json...");
 
@@ -102,20 +101,19 @@ async function updateManifest(ngrokUrl) {
     }
 
     const manifestContent = fs.readFileSync(MANIFEST_PATH, "utf8");
-    let manifest;
+    let manifest: any;
 
     try {
       manifest = JSON.parse(manifestContent);
-    } catch (parseError) {
+    } catch (parseError: any) {
       throw new Error(`Invalid JSON in manifest file: ${parseError.message}`);
     }
 
     const eventsUrl = `${ngrokUrl}/api/events`;
     let updatedCount = 0;
 
-    // Update slash commands URL
     if (manifest.features?.slash_commands) {
-      manifest.features.slash_commands.forEach((cmd) => {
+      manifest.features.slash_commands.forEach((cmd: any) => {
         if (cmd.url !== eventsUrl) {
           cmd.url = eventsUrl;
           updatedCount++;
@@ -123,7 +121,6 @@ async function updateManifest(ngrokUrl) {
       });
     }
 
-    // Update event subscriptions URL
     if (manifest.settings?.event_subscriptions?.request_url !== eventsUrl) {
       if (manifest.settings?.event_subscriptions) {
         manifest.settings.event_subscriptions.request_url = eventsUrl;
@@ -131,7 +128,6 @@ async function updateManifest(ngrokUrl) {
       }
     }
 
-    // Update interactivity URL
     if (manifest.settings?.interactivity?.request_url !== eventsUrl) {
       if (manifest.settings?.interactivity) {
         manifest.settings.interactivity.request_url = eventsUrl;
@@ -143,13 +139,13 @@ async function updateManifest(ngrokUrl) {
     console.log(`✅ Updated ${updatedCount} URL(s) in manifest.json`);
 
     return true;
-  } catch (error) {
-    console.error("❌ Failed to update manifest.json:", error.message);
+  } catch (error: any) {
+    console.error("❌ Failed to update manifest.json:", error.message ?? String(error));
     throw error;
   }
 }
 
-function startNgrok() {
+function startNgrok(): Promise<string> {
   return new Promise((resolve, reject) => {
     console.log("🔗 Starting ngrok tunnel...");
     ngrokProcess = spawn("ngrok", ["http", NGROK_PORT.toString()], {
@@ -157,15 +153,14 @@ function startNgrok() {
       shell: false,
     });
 
-    ngrokProcess.on("error", (error) => {
-      console.error("❌ Failed to start ngrok:", error.message);
+    ngrokProcess.on("error", (error: Error) => {
+      console.error("❌ Failed to start ngrok:", (error as any).message ?? String(error));
       console.error(
         "   Make sure ngrok is installed: https://ngrok.com/download",
       );
       reject(error);
     });
 
-    // Wait for ngrok to start and get the URL
     const pollNgrokUrl = (attempt = 1, maxAttempts = 10) => {
       setTimeout(async () => {
         try {
@@ -173,11 +168,11 @@ function startNgrok() {
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}`);
           }
-          const response = await res.json();
-          const httpsTunnel = response.tunnels?.find((t) => t.proto === "https");
+          const response = await res.json() as any;
+          const httpsTunnel = response.tunnels?.find((t: any) => t.proto === "https");
 
           if (httpsTunnel) {
-            const ngrokUrl = httpsTunnel.public_url;
+            const ngrokUrl = httpsTunnel.public_url as string;
             console.log(`🌐 Ngrok tunnel ready: ${ngrokUrl}`);
             resolve(ngrokUrl);
           } else if (attempt < maxAttempts) {
@@ -201,7 +196,7 @@ function startNgrok() {
           } else {
             console.error(
               "❌ Failed to get ngrok URL after multiple attempts:",
-              error.message ?? String(error),
+              (error as any).message ?? String(error),
             );
             console.error(
               "   Make sure ngrok is running and accessible at localhost:4040",
@@ -216,19 +211,19 @@ function startNgrok() {
   });
 }
 
-async function getExistingNgrokUrl() {
+async function getExistingNgrokUrl(): Promise<string | undefined> {
   try {
     const res = await fetch(NGROK_API_URL);
     if (!res.ok) return undefined;
-    const response = await res.json();
-    const httpsTunnel = response.tunnels?.find((t) => t.proto === "https");
-    return httpsTunnel?.public_url;
+    const response = await res.json() as any;
+    const httpsTunnel = response.tunnels?.find((t: any) => t.proto === "https");
+    return httpsTunnel?.public_url as string | undefined;
   } catch {
     return undefined;
   }
 }
 
-async function ensureNgrok() {
+async function ensureNgrok(): Promise<string> {
   const existingUrl = await getExistingNgrokUrl();
   if (existingUrl) {
     console.log(`🌐 Reusing existing ngrok tunnel: ${existingUrl}`);
@@ -240,7 +235,7 @@ async function ensureNgrok() {
   return url;
 }
 
-async function startSlackApp(appId) {
+async function startSlackApp(appId?: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!appId) {
       console.log("🚀 Starting Slack app");
@@ -260,8 +255,8 @@ async function startSlackApp(appId) {
       });
     }
 
-    slackProcess.on("error", (error) => {
-      console.error("❌ Failed to start Slack app:", error.message);
+    slackProcess.on("error", (error: Error) => {
+      console.error("❌ Failed to start Slack app:", (error as any).message ?? String(error));
       console.error(
         "   Make sure Slack CLI is installed: https://api.slack.com/automation/cli/install",
       );
@@ -272,7 +267,6 @@ async function startSlackApp(appId) {
       resolve();
     });
 
-    // Handle unexpected exit
     slackProcess.on("exit", (code) => {
       if (!isShuttingDown && code !== 0) {
         console.error(`❌ Slack app exited unexpectedly with code ${code}`);
@@ -281,12 +275,10 @@ async function startSlackApp(appId) {
   });
 }
 
-async function start() {
+async function start(): Promise<void> {
   try {
-    // Ensure common binary paths are available
     augmentPathForBrew();
 
-    // Verify required binaries
     const [hasSlackCli, hasNgrokBinary] = await Promise.all([
       checkBinaryAvailable("slack", ["--version"]),
       checkBinaryAvailable("ngrok", ["version"]),
@@ -304,13 +296,10 @@ async function start() {
       );
     }
 
-    // Ensure ngrok tunnel is available (reuse if already running)
     const ngrokUrl = await ensureNgrok();
 
-    // Update manifest with ngrok URL
     await updateManifest(ngrokUrl);
 
-    // Resolve app_id (env > .slack/apps.dev.json > .slack/apps.json)
     const appId = (() => {
       if (process.env.SLACK_APP_ID) return process.env.SLACK_APP_ID;
       const devPath = path.join(__dirname, "..", ".slack", "apps.dev.json");
@@ -320,19 +309,18 @@ async function start() {
           try {
             const apps = JSON.parse(fs.readFileSync(p, "utf8"));
             const firstKey = Object.keys(apps)[0];
-            return firstKey ? apps[firstKey]?.app_id : undefined;
+            return firstKey ? apps[firstKey]?.app_id as string | undefined : undefined;
           } catch {}
         }
       }
       return undefined;
     })();
 
-    // Start Slack app (which will start the dev server via hooks)
     await startSlackApp(appId);
-  } catch (error) {
+  } catch (error: any) {
     console.error(
       "\n❌ Failed to start development environment:",
-      error.message,
+      error.message ?? String(error),
     );
     cleanup();
     process.exit(1);
@@ -340,3 +328,5 @@ async function start() {
 }
 
 start();
+
+

@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +10,6 @@ import ora from "ora";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Color theme
 const colors = {
   primary: chalk.hex("#0070f3"),
   success: chalk.green,
@@ -21,7 +20,15 @@ const colors = {
   highlight: chalk.magenta,
 };
 
-async function main() {
+type SlackCreateAppResponse = {
+  ok?: boolean;
+  app_id?: string;
+  error?: string;
+  errors?: Array<{ message?: string; pointer?: string }>;
+  credentials?: { signing_secret?: string };
+};
+
+async function main(): Promise<void> {
   try {
     const configToken = await getAppConfigToken();
     const result = await createAppFromManifest(configToken);
@@ -47,7 +54,7 @@ async function main() {
     );
 
     process.exitCode = 0;
-  } catch (err) {
+  } catch (err: any) {
     handleError(err);
     process.exitCode = 1;
   }
@@ -55,7 +62,7 @@ async function main() {
 
 main();
 
-async function getAppConfigToken() {
+async function getAppConfigToken(): Promise<string> {
   console.log(
     `\n${colors.primary("📋 Step 1:")} ${colors.highlight("Setup your Slack App")}`,
   );
@@ -63,7 +70,7 @@ async function getAppConfigToken() {
     colors.muted("Generate an App Configuration Token in Slack to continue.\n"),
   );
 
-   const appConfigToken = await promptValueOrOpen(
+  const appConfigToken = await promptValueOrOpen(
     "SLACK_APP_CONFIG_TOKEN",
     "Press ENTER to create token or paste your token here:",
     "https://api.slack.com/apps",
@@ -74,7 +81,9 @@ async function getAppConfigToken() {
   return appConfigToken;
 }
 
-async function createAppFromManifest(configToken) {
+async function createAppFromManifest(
+  configToken: string,
+): Promise<SlackCreateAppResponse> {
   const spinner = ora({
     text: "Reading local manifest.json...",
     color: "blue",
@@ -84,14 +93,17 @@ async function createAppFromManifest(configToken) {
     const manifest = await readManifestFile();
     spinner.text = "Creating Slack app from manifest...";
 
-    const result = await createSlackAppFromManifest(configToken, manifest);
+    const result: SlackCreateAppResponse = await createSlackAppFromManifest(
+      configToken,
+      manifest,
+    );
 
     if (!result?.ok) {
       spinner.fail("Failed to create Slack app");
-      const error = new Error(
+      const error: any = new Error(
         result?.error ? result.error : "Failed to create app",
       );
-      error.response = result;
+      (error as any).response = result;
       throw error;
     }
 
@@ -110,7 +122,7 @@ async function createAppFromManifest(configToken) {
   }
 }
 
-async function linkApp(appId) {
+async function linkApp(appId?: string): Promise<void> {
   if (!appId) {
     console.log(colors.error("❌ No app ID available for linking"));
     console.log(
@@ -133,14 +145,11 @@ async function linkApp(appId) {
   } else {
     spinner.fail("Failed to link app automatically");
     console.log(colors.warning("⚠️  Please run manually:"));
-    console.log(
-      colors.muted(`   slack app link`),
-    );
+    console.log(colors.muted(`   slack app link`));
   }
 }
 
-async function ensureSigningSecret(result) {
-
+async function ensureSigningSecret(result: SlackCreateAppResponse): Promise<void> {
   const signingSecret = result?.credentials?.signing_secret;
   if (signingSecret) {
     const spinner = ora("Adding signing secret to .env...").start();
@@ -153,9 +162,7 @@ async function ensureSigningSecret(result) {
   const value = await promptValueOrOpen(
     "SLACK_SIGNING_SECRET",
     "Press ENTER to open app settings or paste your signing secret here:",
-    appId
-      ? `https://api.slack.com/apps/${appId}`
-      : "https://api.slack.com/apps",
+    appId ? `https://api.slack.com/apps/${appId}` : "https://api.slack.com/apps",
   );
 
   const spinner = ora("Adding signing secret to environment...").start();
@@ -163,7 +170,7 @@ async function ensureSigningSecret(result) {
   spinner.succeed("Signing secret added to .env!");
 }
 
-async function configureAIGateway() {
+async function configureAIGateway(): Promise<void> {
   console.log(
     `\n${colors.primary("🤖 Step 2:")} ${colors.highlight("Setup the Vercel AI Gateway")}`,
   );
@@ -184,13 +191,12 @@ async function configureAIGateway() {
   spinner.succeed("AI Gateway configured!");
 }
 
-async function startTunnel() {
+async function startTunnel(): Promise<ChildProcess> {
   const spinner = ora({
     text: "Initializing development tunnel...",
     color: "cyan",
   }).start();
 
-  // Give a moment for the user to see the spinner
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
   spinner.succeed("Development tunnel starting...");
@@ -204,13 +210,13 @@ async function startTunnel() {
   });
 
   tunnelProcess.on("exit", (code) => {
-    process.exitCode = code;
+    process.exitCode = code ?? 0;
   });
 
   return tunnelProcess;
 }
 
-async function setManifestSourceLocal() {
+async function setManifestSourceLocal(): Promise<void> {
   const spinner = ora("Updating manifest configuration...").start();
 
   try {
@@ -221,19 +227,24 @@ async function setManifestSourceLocal() {
     }
 
     const raw = fs.readFileSync(configPath, "utf8");
-    const json = JSON.parse(raw || "{}");
+    const json: any = JSON.parse(raw || "{}");
     if (!json.manifest) json.manifest = {};
     json.manifest.source = "local";
     fs.writeFileSync(configPath, `${JSON.stringify(json, null, 2)}\n`, "utf8");
 
     spinner.succeed("Manifest configuration updated");
-  } catch (e) {
+  } catch (e: any) {
     spinner.fail("Failed to update manifest configuration");
     console.log(colors.error(`Error: ${e?.message ? e.message : String(e)}`));
   }
 }
 
-async function promptValueOrOpen(label, tip, url, validate) {
+async function promptValueOrOpen(
+  label: string,
+  tip: string,
+  url: string,
+  validate?: string | ((value: string) => boolean),
+): Promise<string> {
   while (true) {
     const value = await input({
       message: `${colors.highlight(label)}: ${colors.muted(tip)}`,
@@ -252,7 +263,6 @@ async function promptValueOrOpen(label, tip, url, validate) {
       continue;
     }
 
-    // Open URL if no value provided
     const spinner = ora(`Opening ${label.toLowerCase()} page...`).start();
     const opened = openUrl(url);
 
@@ -265,11 +275,13 @@ async function promptValueOrOpen(label, tip, url, validate) {
 
     const requiredValue = await input({
       message: `${colors.highlight(label)}:`,
-      validate: (val) => {
+      validate: (val: string) => {
         const t = String(val ?? "").trim();
         if (t.length === 0) return `${label} cannot be empty. Please try again.`;
-        if (typeof validate === "string" && !t.startsWith(validate)) return `Invalid ${label}. Please try again.`;
-        if (typeof validate === "function" && !validate(t)) return `Invalid ${label}. Please try again.`;
+        if (typeof validate === "string" && !t.startsWith(validate))
+          return `Invalid ${label}. Please try again.`;
+        if (typeof validate === "function" && !validate(t))
+          return `Invalid ${label}. Please try again.`;
         return true;
       },
     });
@@ -277,7 +289,7 @@ async function promptValueOrOpen(label, tip, url, validate) {
   }
 }
 
-function openUrl(url) {
+function openUrl(url: string): boolean {
   try {
     if (process.platform === "darwin") {
       const p = spawn("open", [url], { stdio: "ignore", detached: true });
@@ -300,7 +312,7 @@ function openUrl(url) {
   }
 }
 
-async function readManifestFile() {
+async function readManifestFile(): Promise<any> {
   const manifestPath = path.join(__dirname, "..", "manifest.json");
   if (!fs.existsSync(manifestPath)) {
     throw new Error(`manifest.json not found at ${manifestPath}`);
@@ -310,7 +322,10 @@ async function readManifestFile() {
   return parsed;
 }
 
-async function createSlackAppFromManifest(token, manifest) {
+async function createSlackAppFromManifest(
+  token: string,
+  manifest: any,
+): Promise<SlackCreateAppResponse> {
   const params = new URLSearchParams();
   params.set("manifest", JSON.stringify(manifest));
   const res = await fetch("https://slack.com/api/apps.manifest.create", {
@@ -324,11 +339,11 @@ async function createSlackAppFromManifest(token, manifest) {
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
-  const data = await res.json();
+  const data = (await res.json()) as SlackCreateAppResponse;
   return data;
 }
 
-function linkSlackApp(appId) {
+function linkSlackApp(appId: string): boolean {
   try {
     const args = ["app", "link", "--app", appId, "--environment", "local"];
     const r = spawnSync("slack", args, { stdio: "inherit" });
@@ -338,7 +353,7 @@ function linkSlackApp(appId) {
   }
 }
 
-function addToEnv(key, value) {
+function addToEnv(key: string, value: string): void {
   const envPath = path.join(__dirname, "..", ".env");
   let envContent = "";
   if (fs.existsSync(envPath)) {
@@ -353,7 +368,7 @@ function addToEnv(key, value) {
   fs.writeFileSync(envPath, next, "utf8");
 }
 
-function handleError(err) {
+function handleError(err: any): void {
   console.log("\n");
   const message = err?.message ? err.message : String(err);
 
@@ -370,11 +385,13 @@ function handleError(err) {
     ),
   );
 
-  const resp = err?.response ? err.response : undefined;
+  const resp: SlackCreateAppResponse | undefined = err?.response
+    ? (err.response as SlackCreateAppResponse)
+    : undefined;
   handleSlackApiError(resp);
 }
 
-function handleSlackApiError(resp) {
+function handleSlackApiError(resp?: SlackCreateAppResponse): void {
   if (!resp) return;
 
   const baseError = resp.error ? resp.error : "unknown_error";
@@ -397,3 +414,5 @@ function handleSlackApiError(resp) {
     }
   }
 }
+
+
