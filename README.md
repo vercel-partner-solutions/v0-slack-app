@@ -24,18 +24,21 @@ This is a Slack Agent template built with Bolt for JavaScript (TypeScript) and t
 2. Choose the workspace you want to install the application to
 3. Copy the contents of [manifest.json](./manifest.json) into the text box that says `*Paste your manifest code here*` (within the JSON tab) and click _Next_
 4. Review the configuration and click _Create_
-5. From the _Basic Information_ tab, copy your _Slack Signing Secret_ into your `.env` file under `SLACK_SIGNING_SECRET`.
-6. Open the _Install App_ tab on the left menu. Click _Install to <Workspace_Name>_ and _Allow_ on the screen that follows.
-7. On the following screen, copy the _Bot User OAuth Token_ into your `.env` file under `SLACK_BOT_TOKEN`.
+5. From the _Basic Information_ tab, copy your _Slack Signing Secret_ into your `.env` file under `SLACK_SIGNING_SECRET`
+6. Open the _Install App_ tab on the left menu. Click _Install to <Workspace_Name>_ and _Allow_ on the screen that follows
+7. On the following screen, copy the _Bot User OAuth Token_ into your `.env` file under `SLACK_BOT_TOKEN`
 
+#### Environment Setup
+1. Add your `AI_GATEWAY_API_KEY` to your `.env` file. You can get one [here](https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%2Fapi-keys%3Futm_source%3Dai_gateway_landing_page&title=Get+an+API+Key)
+2. _(Optional)_ You can also use your `VERCEL_OIDC_TOKEN ` to authenticate with the Vercel AI Gateway. More info [here](https://vercel.com/docs/oidc#in-local-development)
 
 #### Prepare for Local Development
 
 1. In the terminal run `slack app link`
 2. Select your Slack team in the terminal
 3. Copy your App ID from the app you just created
-4. Select `Local` when prompted
-5. Open your [`config.json`](./.slack/config.json) file under `/.slack/config.json` and update your manifest source to `local`.
+4 Select `Local` when prompted
+5. Open your [`config.json`](./.slack/config.json) file under `/.slack/config.json` and update your manifest source to `local`
 ```json
 {
   "manifest": {
@@ -44,9 +47,9 @@ This is a Slack Agent template built with Bolt for JavaScript (TypeScript) and t
   "project_id": "<project-id-added-by-slack-cli>"
 }
 ```
-6. Start your local server with automatic tunneling using the `pnpm dev:tunnel` command. You can also use the generic `slack run` command if you do not want automatic tunneling and manifest updates. If prompted, select the workspace you'd like to grant access to. Select `yes` when asked _Update app settings with changes to the local manifest?_.
+6. Start your local server with automatic tunneling using the `pnpm dev:tunnel` command. You can also use the generic `slack run` command if you do not want automatic tunneling and manifest updates. If prompted, select the workspace you'd like to grant access to. Select `yes` when asked _Update app settings with changes to the local manifest?_
 
-7. Open your Slack workspace and add your new Slack Agent to a channel. Your Slack Agent should respond whenever it's tagged in a message or sent a DM.
+7. Open your Slack workspace and add your new Slack Agent to a channel. Your Slack Agent should respond whenever it's tagged in a message or sent a DM
 
 ## Deploy to Vercel
 1. Create a new Vercel project [here](https://www.vercel.com/new) or select _Add new..._ and _project_ from the Vercel dashboard
