@@ -16,7 +16,7 @@ importers:
         version: 7.9.3
       '@vercel/slack-bolt':
         specifier: latest
-        version: 0.1.2(@slack/bolt@4.4.0(@types/express@5.0.3))
+        version: 0.1.4(@slack/bolt@4.4.0(@types/express@5.0.3))
       ai:
         specifier: latest
         version: 5.0.14(zod@4.0.17)
@@ -991,8 +991,8 @@ packages:
     resolution: {integrity: sha512-W8FQi6kEh2e8zVhQ0eeRnxdvIoOkAp/CPAahcNio6nO9dsIwb9b34z90KOlheoyuVf6LSOEdjlkxSkapNEc+4A==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@vercel/functions@2.2.11':
-    resolution: {integrity: sha512-NhbMW01IyepdcaQiYUt9XXodtq5SFr2gNiL7lmX/2cgjP7cKy6V+RYXKT15EbizqZ9o3j9gqdYScxd1tvY211w==}
+  '@vercel/functions@2.2.12':
+    resolution: {integrity: sha512-WGGqro/Rg00Epj+t2l6lr68q6ZkFt5+Q4F4Ok8sJbYrpu5pniDay09ihJqUoz81NI9PIfIahGEjaKpucUhEIrg==}
     engines: {node: '>= 18'}
     peerDependencies:
       '@aws-sdk/credential-provider-web-identity': '*'
@@ -1005,12 +1005,12 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@vercel/oidc@2.0.0':
-    resolution: {integrity: sha512-U0hncpXof7gC9xtmSrjz6vrDqdwJXi8z/zSc9FyS80AoXKfCZtpkBz9gtL3x30Agmpxpwe35P1W2dP9Epa/RGA==}
+  '@vercel/oidc@2.0.1':
+    resolution: {integrity: sha512-p/rFk8vz+AggU0bHXjwtRUyXNxboLvfCjwN0KH5xhBJ5wGS+n/psLJP1c69QPdWIZM4aVVIrTqdjUuDwuJGYzQ==}
     engines: {node: '>= 18'}
 
-  '@vercel/slack-bolt@0.1.2':
-    resolution: {integrity: sha512-VW9uQNfmduoYOKWYHACDSzynQXaLJ+8vQEqlnH2YgKMUbGyabU4Eo7jcD3TL0JpqxAvS5Iak0A4zG5UvECcT3g==}
+  '@vercel/slack-bolt@0.1.4':
+    resolution: {integrity: sha512-V5yzCQK+jvbxVjIRsMY95oNmSYWrj+8ICP3mq+ZbhUM+tAld4gT0GAg296BKZ5BgtSgYMQWGUCEq/AXmpDmHHw==}
     peerDependencies:
       '@slack/bolt': ^4.4.0
 
@@ -3949,9 +3949,9 @@ snapshots:
       '@typescript-eslint/types': 8.39.1
       eslint-visitor-keys: 4.2.1
 
-  '@vercel/functions@2.2.11':
+  '@vercel/functions@2.2.12':
     dependencies:
-      '@vercel/oidc': 2.0.0
+      '@vercel/oidc': 2.0.1
 
   '@vercel/nft@0.29.4(rollup@4.46.2)':
     dependencies:
@@ -3972,14 +3972,16 @@ snapshots:
       - rollup
       - supports-color
 
-  '@vercel/oidc@2.0.0': {}
+  '@vercel/oidc@2.0.1':
+    dependencies:
+      '@types/ms': 2.1.0
+      ms: 2.1.3
 
-  '@vercel/slack-bolt@0.1.2(@slack/bolt@4.4.0(@types/express@5.0.3))':
+  '@vercel/slack-bolt@0.1.4(@slack/bolt@4.4.0(@types/express@5.0.3))':
     dependencies:
       '@slack/bolt': 4.4.0(@types/express@5.0.3)
       '@slack/logger': 4.0.0
-      '@vercel/functions': 2.2.11
-      tsscmp: 1.0.6
+      '@vercel/functions': 2.2.12
     transitivePeerDependencies:
       - '@aws-sdk/credential-provider-web-identity'
 
