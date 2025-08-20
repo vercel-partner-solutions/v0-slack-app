@@ -18,6 +18,12 @@ This is a Slack Agent template built with Bolt for JavaScript (TypeScript) and t
    slack create --template https://github.com/vercel-partner-solutions/slack-agent-template.git
    ```
 
+#### (Optional): Use the configure command to access a guided setup in your terminal
+```
+pnpm configure
+```
+_This command is still a work in progress. We're working with the Slack team to include this in the Slack CLI for Bolt_
+
 #### Create a Slack App
 
 1. Open [https://api.slack.com/apps/new](https://api.slack.com/apps/new) and choose "From an app manifest"
