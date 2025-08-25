@@ -4,6 +4,7 @@ import { respondToMessage } from "~/lib/ai/respond-to-message";
 import {
   getThreadContextAsModelMessage,
   updateAgentStatus,
+  MessageState,
 } from "~/lib/slack/utils";
 
 export const directMessageCallback = async ({
@@ -13,10 +14,15 @@ export const directMessageCallback = async ({
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
   // @ts-expect-error
-  const { channel, thread_ts, text } = message;
+  const { channel, thread_ts, text, ts } = message;
   const { botId } = context;
 
   if (!text) return;
+
+  await MessageState.setProcessing({
+    channel,
+    timestamp: ts,
+  });
 
   let messages: ModelMessage[] = [];
   try {
@@ -62,8 +68,19 @@ export const directMessageCallback = async ({
       text: response,
       thread_ts: thread_ts || message.ts,
     });
+
+    await MessageState.setCompleted({
+      channel,
+      timestamp: ts,
+    });
   } catch (error) {
     logger.error("DM handler failed:", error);
+
+    await MessageState.setError({
+      channel,
+      timestamp: ts,
+    });
+    
     await say({
       text: "Sorry, something went wrong processing your message. Please try again.",
       thread_ts: thread_ts || message.ts,

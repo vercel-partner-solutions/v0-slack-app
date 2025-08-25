@@ -120,3 +120,110 @@ export const getChannelContextAsModelMessage = async (
     };
   });
 };
+
+
+export const addReaction = async ({
+  channel,
+  timestamp,
+  name,
+}: {
+  channel: string;
+  timestamp: string;
+  name: string;
+}) => {
+  try {
+    await app.client.reactions.add({
+      channel,
+      timestamp,
+      name,
+    });
+  } catch (error) {
+    app.logger.warn(`Failed to add reaction ${name}:`, error);
+  }
+};
+
+export const removeReaction = async ({
+  channel,
+  timestamp,
+  name,
+}: {
+  channel: string;
+  timestamp: string;
+  name: string;
+}) => {
+  try {
+    await app.client.reactions.remove({
+      channel,
+      timestamp,
+      name,
+    });
+  } catch (error) {
+    app.logger.warn(`Failed to remove reaction ${name}:`, error);
+  }
+};
+
+/**
+ * Higher-level API for managing message processing state reactions
+ */
+export const MessageState = {
+  /**
+   * Mark a message as being processed by adding an hourglass reaction
+   */
+  setProcessing: async ({
+    channel,
+    timestamp,
+  }: {
+    channel: string;
+    timestamp: string;
+  }) => {
+    await addReaction({
+      channel,
+      timestamp,
+      name: "hourglass_flowing_sand",
+    });
+  },
+
+  /**
+   * Mark a message as successfully processed by replacing hourglass with checkmark
+   */
+  setCompleted: async ({
+    channel,
+    timestamp,
+  }: {
+    channel: string;
+    timestamp: string;
+  }) => {
+    await removeReaction({
+      channel,
+      timestamp,
+      name: "hourglass_flowing_sand",
+    });
+    await addReaction({
+      channel,
+      timestamp,
+      name: "white_check_mark",
+    });
+  },
+
+  /**
+   * Mark a message as failed by replacing hourglass with error mark
+   */
+  setError: async ({
+    channel,
+    timestamp,
+  }: {
+    channel: string;
+    timestamp: string;
+  }) => {
+    await removeReaction({
+      channel,
+      timestamp,
+      name: "hourglass_flowing_sand",
+    });
+    await addReaction({
+      channel,
+      timestamp,
+      name: "x",
+    });
+  },
+};
