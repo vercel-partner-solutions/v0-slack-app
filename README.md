@@ -43,7 +43,7 @@ _This command is still a work in progress. We're working with the Slack team to 
 1. In the terminal run `slack app link`
 2. Select your Slack team in the terminal
 3. Copy your App ID from the app you just created
-4 Select `Local` when prompted
+4. Select `Local` when prompted
 5. Open your [`config.json`](./.slack/config.json) file under `/.slack/config.json` and update your manifest source to `local`
 ```json
 {
