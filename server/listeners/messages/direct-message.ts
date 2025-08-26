@@ -58,7 +58,6 @@ export const directMessageCallback = async ({
           },
         },
       ],
-      // It's important to keep the text property as a fallback for improper markdown
       text: response,
       thread_ts: thread_ts || message.ts,
     });

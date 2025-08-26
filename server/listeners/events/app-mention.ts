@@ -4,6 +4,7 @@ import { respondToMessage } from "~/lib/ai/respond-to-message";
 import {
   getThreadContextAsModelMessage,
   updateAgentStatus,
+  MessageState,
 } from "~/lib/slack/utils";
 
 const appMentionCallback = async ({
@@ -12,8 +13,13 @@ const appMentionCallback = async ({
   logger,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
+  const { channel, thread_ts, ts } = event;
+
   try {
-    const { channel, thread_ts } = event;
+    await MessageState.setProcessing({
+      channel,
+      timestamp: ts,
+    });
 
     let messages: ModelMessage[] = [];
     if (thread_ts) {
@@ -57,8 +63,25 @@ const appMentionCallback = async ({
       text: response,
       thread_ts: event.thread_ts || event.ts,
     });
+
+    // Set completed state
+    await MessageState.setCompleted({
+      channel,
+      timestamp: ts,
+    });
   } catch (error) {
     logger.error("app_mention handler failed:", error);
+    
+    // Try to mark message as failed, but don't let this prevent user notification
+    try {
+      await MessageState.setError({
+        channel,
+        timestamp: ts,
+      });
+    } catch (reactionError) {
+      logger.warn("Failed to set error reaction:", reactionError);
+    }
+    
     await say({
       text: "Sorry, something went wrong processing your message. Please try again.",
       thread_ts: event.thread_ts || event.ts,
