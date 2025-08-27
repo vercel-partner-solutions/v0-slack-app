@@ -133,6 +133,6 @@ export const respondToMessage = async ({
     return text;
   } catch (error) {
     app.logger.error(error);
-    return "Sorry, I encountered an error while processing your message.";
+    throw error;
   }
 };
