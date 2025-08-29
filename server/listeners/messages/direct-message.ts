@@ -8,6 +8,7 @@ import {
 
 export const directMessageCallback = async ({
   message,
+  event,
   say,
   logger,
   context,
@@ -45,7 +46,7 @@ export const directMessageCallback = async ({
       channel,
       thread_ts,
       botId,
-      isDirectMessage: true,
+      event,
     });
 
     await say({

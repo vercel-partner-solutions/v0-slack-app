@@ -1,6 +1,8 @@
+import type { KnownEventFromType } from "@slack/bolt";
 import { generateText, type ModelMessage, stepCountIs } from "ai";
 import { app } from "~/app";
 import {
+  getActiveTools,
   getChannelMessagesTool,
   getThreadMessagesTool,
   updateAgentStatusTool,
@@ -9,7 +11,7 @@ import {
 
 interface RespondToMessageOptions {
   messages: ModelMessage[];
-  isDirectMessage?: boolean;
+  event: KnownEventFromType<"message"> | KnownEventFromType<"app_mention">;
   channel?: string;
   thread_ts?: string;
   botId?: string;
@@ -23,7 +25,7 @@ export type ExperimentalContext = {
 
 export const respondToMessage = async ({
   messages,
-  isDirectMessage = false,
+  event,
   channel,
   thread_ts,
   botId,
@@ -35,7 +37,9 @@ export const respondToMessage = async ({
 			You are Slack Agent, a friendly and professional agent for Slack.
       Always gather context from Slack before asking the user for clarification.
 
-      ${isDirectMessage ? "You are in a direct message with the user." : "You are not in a direct message with the user."}
+      ${"channel_type" in event && event.channel_type === "im"
+          ? "You are in a direct message with the user."
+          : "You are not in a direct message with the user."}
 
       Core Rules
       1. Decide if Context Is Needed
@@ -55,6 +59,7 @@ export const respondToMessage = async ({
       - Always read the thread and channel before asking the user for next steps or clarification.
 
       4. Titles
+      - You can only update the title if you are in a direct message.
       - New conversation → updateChatTitleTool with a relevant title.
       - Topic change → updateChatTitleTool with a new title.
       - No change → skip.
@@ -103,17 +108,7 @@ export const respondToMessage = async ({
       },
       prepareStep: () => {
         return {
-          activeTools: isDirectMessage
-            ? [
-                "updateChatTitleTool",
-                "getChannelMessagesTool",
-                "updateAgentStatusTool",
-              ]
-            : [
-                "getThreadMessagesTool",
-                "getChannelMessagesTool",
-                "updateAgentStatusTool",
-              ],
+          activeTools: getActiveTools(event),
         };
       },
       onStepFinish: ({ toolCalls }) => {
