@@ -92,7 +92,7 @@ export const respondToMessage = async ({
         │
         ├─ Is direct message?
         │      └─ YES:
-        │            1. Has conversation topic changed, is it a new conversation or are you unsure? Yes → updateChatTitleTool
+        │            1. Update the title of the chat to something concise and relevant to the conversation -> updateChatTitleTool
         │            2. Respond
         │
         └─ End
