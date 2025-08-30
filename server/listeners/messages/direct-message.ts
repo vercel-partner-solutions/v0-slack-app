@@ -52,12 +52,9 @@ export const directMessageCallback = async ({
     await say({
       blocks: [
         {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: response,
-          },
-        },
+          type: "markdown",
+          text: response,
+        }
       ],
       text: response,
       thread_ts: thread_ts || message.ts,

@@ -54,7 +54,6 @@ const appMentionCallback = async ({
       blocks: [
         {
           type: "markdown",
-          //@ts-expect-error
           text: response,
         }
       ],
