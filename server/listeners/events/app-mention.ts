@@ -3,8 +3,8 @@ import type { ModelMessage } from "ai";
 import { respondToMessage } from "~/lib/ai/respond-to-message";
 import {
   getThreadContextAsModelMessage,
-  updateAgentStatus,
   MessageState,
+  updateAgentStatus,
 } from "~/lib/slack/utils";
 
 const appMentionCallback = async ({
@@ -47,17 +47,15 @@ const appMentionCallback = async ({
       channel,
       thread_ts,
       botId: context.botId,
+      event,
     });
 
     await say({
       blocks: [
         {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: response,
-          },
-        },
+          type: "markdown",
+          text: response,
+        }
       ],
       // It's important to keep the text property as a fallback for improper markdown
       text: response,
@@ -71,7 +69,7 @@ const appMentionCallback = async ({
     });
   } catch (error) {
     logger.error("app_mention handler failed:", error);
-    
+
     // Try to mark message as failed, but don't let this prevent user notification
     try {
       await MessageState.setError({
@@ -81,7 +79,7 @@ const appMentionCallback = async ({
     } catch (reactionError) {
       logger.warn("Failed to set error reaction:", reactionError);
     }
-    
+
     await say({
       text: "Sorry, something went wrong processing your message. Please try again.",
       thread_ts: event.thread_ts || event.ts,

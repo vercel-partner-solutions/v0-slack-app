@@ -8,6 +8,7 @@ import {
 
 export const directMessageCallback = async ({
   message,
+  event,
   say,
   logger,
   context,
@@ -45,18 +46,15 @@ export const directMessageCallback = async ({
       channel,
       thread_ts,
       botId,
-      isDirectMessage: true,
+      event,
     });
 
     await say({
       blocks: [
         {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: response,
-          },
-        },
+          type: "markdown",
+          text: response,
+        }
       ],
       text: response,
       thread_ts: thread_ts || message.ts,

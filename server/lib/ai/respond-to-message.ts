@@ -1,6 +1,8 @@
+import type { KnownEventFromType } from "@slack/bolt";
 import { generateText, type ModelMessage, stepCountIs } from "ai";
 import { app } from "~/app";
 import {
+  getActiveTools,
   getChannelMessagesTool,
   getThreadMessagesTool,
   updateAgentStatusTool,
@@ -9,7 +11,7 @@ import {
 
 interface RespondToMessageOptions {
   messages: ModelMessage[];
-  isDirectMessage?: boolean;
+  event: KnownEventFromType<"message"> | KnownEventFromType<"app_mention">;
   channel?: string;
   thread_ts?: string;
   botId?: string;
@@ -23,7 +25,7 @@ export type ExperimentalContext = {
 
 export const respondToMessage = async ({
   messages,
-  isDirectMessage = false,
+  event,
   channel,
   thread_ts,
   botId,
@@ -35,7 +37,9 @@ export const respondToMessage = async ({
 			You are Slack Agent, a friendly and professional agent for Slack.
       Always gather context from Slack before asking the user for clarification.
 
-      ${isDirectMessage ? "You are in a direct message with the user." : "You are not in a direct message with the user."}
+      ${"channel_type" in event && event.channel_type === "im"
+          ? "You are in a direct message with the user."
+          : "You are not in a direct message with the user."}
 
       Core Rules
       1. Decide if Context Is Needed
@@ -48,16 +52,16 @@ export const respondToMessage = async ({
       - Never mention technical details like API parameters or IDs.
 
       3. Fetching Context
-      - If the message is a direct message, you don't have access to the thread, you only have access to the channel messages.
+      - If the message is a direct message, you don't have access to the channel, you only have access to the thread messages.
       - If context is needed, always read the thread first → getThreadMessagesTool.
       - If the thread messages are not related to the conversation -> getChannelMessagesTool.
       - Use the combination of thread and channel messages to answer the question.
       - Always read the thread and channel before asking the user for next steps or clarification.
 
       4. Titles
-      - New conversation → updateChatTitleTool with a relevant title.
+      - You can only update the title if you are in a direct message.
+      - New conversation started → updateChatTitleTool with a relevant title.
       - Topic change → updateChatTitleTool with a new title.
-      - No change → skip.
       - Never update your status or inform the user when updating the title. This is an invisible action the user does not need to know about.
 
       5. Responding
@@ -71,24 +75,24 @@ export const respondToMessage = async ({
         ├─ Needs context? (ambiguous, incomplete, references past)
         │      ├─ YES:
         │      │     1. updateAgentStatusTool ("is reading thread history...")
-        │      │     2. getThreadMessagesTool
+        │      │     2. getThreadMessagesTool 
         │      │     3. Thread context answers the question?
         │      │            ├─ YES:
-        │      │            │     ├─ New chat && is direct message? → updateChatTitleTool
-        │      │            │     └─ Respond
+        │      │            │   └─ Respond
+        │      │            │     
         │      │            └─ NO:
         │      │                 1. updateAgentStatusTool ("is reading channel messages...")
         │      │                 2. getChannelMessagesTool
         │      │                 3. Channel context answers the question?
         │      │                        ├─ YES: Respond
-        │      │                        └─ NO: Respond that you are unsure
+        │      │                        └─ NO: Respond that you are unsure ans ask for more context.
         │      │
         │      └─ NO:
         │           Respond immediately (no context fetch needed)
         │
         ├─ Is direct message?
         │      └─ YES:
-        │            1. Has conversation topic changed or is new conversation? Yes → updateChatTitleTool
+        │            1. Update the title of the chat to something concise and relevant to the conversation -> updateChatTitleTool
         │            2. Respond
         │
         └─ End
@@ -103,17 +107,7 @@ export const respondToMessage = async ({
       },
       prepareStep: () => {
         return {
-          activeTools: isDirectMessage
-            ? [
-                "updateChatTitleTool",
-                "getChannelMessagesTool",
-                "updateAgentStatusTool",
-              ]
-            : [
-                "getThreadMessagesTool",
-                "getChannelMessagesTool",
-                "updateAgentStatusTool",
-              ],
+          activeTools: getActiveTools(event),
         };
       },
       onStepFinish: ({ toolCalls }) => {

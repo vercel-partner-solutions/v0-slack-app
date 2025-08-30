@@ -9,7 +9,7 @@ export const updateChatTitleTool = tool({
   inputSchema: z.object({
     title: z.string().describe("The new title of the chat"),
   }),
-  execute: async ({ title }, { experimental_context }) => {
+  execute: ({ title }, { experimental_context }) => {
     try {
       const { channel, thread_ts } =
         experimental_context as ExperimentalContext;
