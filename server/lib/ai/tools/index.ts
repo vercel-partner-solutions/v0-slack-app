@@ -22,7 +22,6 @@ export type ChannelTypes = "channel" | "group" | "im" | "mpim" | "app_home";
 export const SUPPORTED_CHANNEL_TYPES: ChannelTypes[] = [
     "channel",
     "group",
-    "im",
     "mpim",
 ];
 
