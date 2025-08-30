@@ -52,7 +52,7 @@ export const respondToMessage = async ({
       - Never mention technical details like API parameters or IDs.
 
       3. Fetching Context
-      - If the message is a direct message, you don't have access to the thread, you only have access to the channel messages.
+      - If the message is a direct message, you don't have access to the channel, you only have access to the thread messages.
       - If context is needed, always read the thread first → getThreadMessagesTool.
       - If the thread messages are not related to the conversation -> getChannelMessagesTool.
       - Use the combination of thread and channel messages to answer the question.
@@ -60,9 +60,8 @@ export const respondToMessage = async ({
 
       4. Titles
       - You can only update the title if you are in a direct message.
-      - New conversation → updateChatTitleTool with a relevant title.
+      - New conversation started → updateChatTitleTool with a relevant title.
       - Topic change → updateChatTitleTool with a new title.
-      - No change → skip.
       - Never update your status or inform the user when updating the title. This is an invisible action the user does not need to know about.
 
       5. Responding
@@ -76,24 +75,24 @@ export const respondToMessage = async ({
         ├─ Needs context? (ambiguous, incomplete, references past)
         │      ├─ YES:
         │      │     1. updateAgentStatusTool ("is reading thread history...")
-        │      │     2. getThreadMessagesTool
+        │      │     2. getThreadMessagesTool 
         │      │     3. Thread context answers the question?
         │      │            ├─ YES:
-        │      │            │     ├─ New chat && is direct message? → updateChatTitleTool
-        │      │            │     └─ Respond
+        │      │            │   └─ Respond
+        │      │            │     
         │      │            └─ NO:
         │      │                 1. updateAgentStatusTool ("is reading channel messages...")
         │      │                 2. getChannelMessagesTool
         │      │                 3. Channel context answers the question?
         │      │                        ├─ YES: Respond
-        │      │                        └─ NO: Respond that you are unsure
+        │      │                        └─ NO: Respond that you are unsure ans ask for more context.
         │      │
         │      └─ NO:
         │           Respond immediately (no context fetch needed)
         │
         ├─ Is direct message?
         │      └─ YES:
-        │            1. Has conversation topic changed or is new conversation? Yes → updateChatTitleTool
+        │            1. Has conversation topic changed, is it a new conversation or are you unsure? Yes → updateChatTitleTool
         │            2. Respond
         │
         └─ End
