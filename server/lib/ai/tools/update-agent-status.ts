@@ -16,7 +16,7 @@ export const updateAgentStatusTool = tool({
       .min(15)
       .max(30),
   }),
-  execute: async ({ status }, { experimental_context }) => {
+  execute: ({ status }, { experimental_context }) => {
     try {
       const { channel, thread_ts } =
         experimental_context as ExperimentalContext;
