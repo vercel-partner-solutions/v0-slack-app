@@ -1,3 +1,5 @@
+// This is a WIP script to configure the Slack app for local development.
+
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -29,6 +31,10 @@ type SlackCreateAppResponse = {
 };
 
 async function main(): Promise<void> {
+  console.warn(
+    '\x1b[33m\x1b[3m%s\x1b[0m',
+    '⚠  This script is a work in progress and may not work as expected.',
+  );
   try {
     const configToken = await getAppConfigToken();
     const result = await createAppFromManifest(configToken);
@@ -42,8 +48,8 @@ async function main(): Promise<void> {
     console.log(
       boxen(
         `${colors.success("🎉 Setup Complete!")}\n\n` +
-          `Your Slack app is now configured and ready for development.\n` +
-          `The development tunnel is starting...`,
+        `Your Slack app is now configured and ready for development.\n` +
+        `The development tunnel is starting...`,
         {
           padding: 1,
           margin: 1,
@@ -375,7 +381,7 @@ function handleError(err: any): void {
   console.log(
     boxen(
       `${colors.error("❌ Configuration Failed")}\n\n` +
-        `${colors.muted("Error:")} ${message}`,
+      `${colors.muted("Error:")} ${message}`,
       {
         padding: 1,
         margin: 1,
