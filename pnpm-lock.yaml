@@ -20,6 +20,9 @@ importers:
       ai:
         specifier: latest
         version: 5.0.28(zod@4.1.5)
+      v0-sdk:
+        specifier: ^0.10.0
+        version: 0.10.0
       zod:
         specifier: ^4.0.17
         version: 4.1.5
@@ -3014,6 +3017,10 @@ packages:
   uuid@11.1.0:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
+
+  v0-sdk@0.10.0:
+    resolution: {integrity: sha512-xMU/SiM4HQtqYDFo875cKYvcLHjy2IhKYc1H4HRT3NTI7/1dSXbtv0Y/P6U3Qqs2GpB9KSf6gC14ai6UJrqWkQ==}
+    engines: {node: '>=22', pnpm: '>=9'}
 
   validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}
@@ -6094,6 +6101,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid@11.1.0: {}
+
+  v0-sdk@0.10.0: {}
 
   validate-npm-package-license@3.0.4:
     dependencies:

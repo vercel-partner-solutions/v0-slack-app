@@ -19,22 +19,22 @@ import { app } from "~/app";
  */
 export const onlyChannelType =
   (type: SlackEventMiddlewareArgs<"message">["event"]["channel_type"]) =>
-  /**
-   * Middleware that proceeds only when the incoming message is in the specified channel type.
-   *
-   * Channel types include: "im" (DM), "group" (private channel), "mpim" (multi-person DM), and "channel" (public channel).
-   *
-   * @param {SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs} args - Handler args containing the Slack event and next callback.
-   * @returns {Promise<void>} Resolves after conditionally calling `next()`.
-   */
-  async ({
-    event,
-    next,
-  }: SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs) => {
-    if (event.channel_type === type) {
-      await next();
-    }
-  };
+    /**
+     * Middleware that proceeds only when the incoming message is in the specified channel type.
+     *
+     * Channel types include: "im" (DM), "group" (private channel), "mpim" (multi-person DM), and "channel" (public channel).
+     *
+     * @param {SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs} args - Handler args containing the Slack event and next callback.
+     * @returns {Promise<void>} Resolves after conditionally calling `next()`.
+     */
+    async ({
+      event,
+      next,
+    }: SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs) => {
+      if (event.channel_type === type) {
+        await next();
+      }
+    };
 
 export const updateAgentStatus = async ({
   channel,
@@ -63,7 +63,15 @@ export const updateAgentStatus = async ({
 
 // Extend the ModelMessage type with Slack-specific metadata to identify multiple users in the same thread
 export type SlackUIMessage = ModelMessage & {
-  metadata?: MessageElement;
+  subtype?: string;
+  metadata?: MessageElement & {
+    event_type?: string;
+    event_payload?: {
+      chat_id?: string;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
 };
 
 const getThreadContext = async (args: ConversationsRepliesArguments) => {
@@ -79,16 +87,19 @@ export const getThreadContextAsModelMessage = async (
   const messages = await getThreadContext(args);
 
   return messages.map((message) => {
-    const { bot_id, text, user, ts, thread_ts, type } = message;
+    // @ts-expect-error
+    const { bot_id, text, user, ts, thread_ts, type, subtype, metadata } = message;
     return {
       role: bot_id === botId ? "assistant" : "user",
       content: text,
+      subtype,
       metadata: {
         user: user || null,
         bot_id: bot_id || null,
         ts,
         thread_ts,
         type,
+        ...metadata,
       },
     };
   });
@@ -225,4 +236,8 @@ export const MessageState = {
       name: "x",
     });
   },
+};
+
+export const getLastAssistantMessage = (messages: SlackUIMessage[]) => {
+  return messages.findLast((message) => message.role === "assistant");
 };

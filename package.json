@@ -19,6 +19,7 @@
     "@slack/web-api": "^7.10.0",
     "@vercel/slack-bolt": "latest",
     "ai": "latest",
+    "v0-sdk": "^0.10.0",
     "zod": "^4.0.17"
   },
   "devDependencies": {
