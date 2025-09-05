@@ -54,7 +54,7 @@ export const directMessageCallback = async ({
         {
           type: "markdown",
           text: response,
-        }
+        },
       ],
       text: response,
       thread_ts: thread_ts || message.ts,

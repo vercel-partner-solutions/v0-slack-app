@@ -1,5 +1,5 @@
 import { createHandler } from "@vercel/slack-bolt";
-import { app, receiver } from "../app";
+import { app, receiver } from "~/app";
 
 const handler = createHandler(app, receiver);
 

@@ -55,7 +55,7 @@ const appMentionCallback = async ({
         {
           type: "markdown",
           text: response,
-        }
+        },
       ],
       // It's important to keep the text property as a fallback for improper markdown
       text: response,

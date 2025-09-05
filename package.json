@@ -24,6 +24,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
     "@inquirer/input": "^4.2.1",
+    "@ngrok/ngrok": "^1.5.2",
     "@slack/cli-hooks": "^1.2.1",
     "@types/node": "^24.2.1",
     "boxen": "^8.0.1",

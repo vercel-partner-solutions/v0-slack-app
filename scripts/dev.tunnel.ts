@@ -1,332 +1,228 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
+import ngrok from '@ngrok/ngrok';
+import dotenv from 'dotenv';
+import chalk from 'chalk';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config({ path: '.env', quiet: true });
 
-const MANIFEST_PATH = path.join(__dirname, "..", "manifest.json");
-const NGROK_PORT = Number.parseInt(
-  process.env.NGROK_PORT ?? process.env.PORT ?? "3000",
-  10,
-);
-const NGROK_STARTUP_DELAY = 3000;
-const NGROK_API_URL = "http://localhost:4040/api/tunnels";
+const DEFAULT_PORT = 3000;
+const MANIFEST_PATH = 'manifest.json';
+const MANIFEST_CONFIG_PATH = '.slack/config.json';
+const TEMP_MANIFEST_PATH = '.slack/cache/manifest.temp.json';
+const SLACK_EVENTS_PATH = '/api/slack/events';
 
-let ngrokProcess: ChildProcess | null = null;
-let slackProcess: ChildProcess | null = null;
-let isShuttingDown = false;
-let ngrokStartedByUs = false;
+const authtoken = process.env.NGROK_AUTH_TOKEN;
 
-function augmentPathForBrew(): void {
-  const pathsToEnsure: string[] = [];
-  pathsToEnsure.push("/opt/homebrew/bin");
-  pathsToEnsure.push("/usr/local/bin");
-  pathsToEnsure.push("/usr/bin", "/bin", "/usr/sbin", "/sbin");
+const getDevPort = async (): Promise<number> => {
+  let port = DEFAULT_PORT;
 
-  const currentPath = process.env.PATH || "";
-  const pathSegments = new Set(currentPath.split(path.delimiter));
-  for (const p of pathsToEnsure) {
-    if (!pathSegments.has(p) && fs.existsSync(p)) {
-      pathSegments.add(p);
+  // Check environment variable first
+  if (process.env.PORT) {
+    const envPort = Number.parseInt(process.env.PORT, 10);
+    if (!Number.isNaN(envPort) && envPort > 0) {
+      port = envPort;
     }
   }
-  process.env.PATH = Array.from(pathSegments).join(path.delimiter);
-}
 
-function checkBinaryAvailable(command: string, args: string[] = ["--version"]): Promise<boolean> {
-  return new Promise((resolve) => {
-    try {
-      const probe = spawn(command, args, { stdio: "ignore", shell: false });
-      let resolved = false;
-      probe.once("error", (err: NodeJS.ErrnoException) => {
-        if (!resolved) {
-          resolved = true;
-          if (err && err.code === "ENOENT") resolve(false);
-          else resolve(false);
-        }
-      });
-      probe.once("spawn", () => {
-        if (!resolved) {
-          resolved = true;
-          resolve(true);
-        }
-      });
-      probe.once("exit", () => {
-        if (!resolved) {
-          resolved = true;
-          resolve(true);
-        }
-      });
-    } catch {
-      resolve(false);
-    }
-  });
-}
-
-function cleanup(): void {
-  if (isShuttingDown) return;
-  isShuttingDown = true;
-
-  console.log("\n🛑 Shutting down development environment...");
-
-  const processes = [
-    { name: "ngrok tunnel", process: ngrokProcess, shouldKill: ngrokStartedByUs },
-    { name: "slack app", process: slackProcess, shouldKill: true },
-  ];
-
-  processes.forEach(({ name, process, shouldKill }) => {
-    if (process && shouldKill) {
-      console.log(`   Stopping ${name}...`);
-      process.kill("SIGTERM");
-    }
-  });
-
-  setTimeout(() => {
-    console.log("✅ Cleanup complete");
-    process.exit(0);
-  }, 1000);
-}
-
-process.on("SIGINT", cleanup);
-process.on("SIGTERM", cleanup);
-
-async function updateManifest(ngrokUrl: string): Promise<boolean> {
+  // Check package.json dev script for --port flag
   try {
-    console.log("📝 Updating manifest.json...");
-
-    if (!fs.existsSync(MANIFEST_PATH)) {
-      throw new Error(`Manifest file not found at ${MANIFEST_PATH}`);
-    }
-
-    const manifestContent = fs.readFileSync(MANIFEST_PATH, "utf8");
-    let manifest: any;
-
-    try {
-      manifest = JSON.parse(manifestContent);
-    } catch (parseError: any) {
-      throw new Error(`Invalid JSON in manifest file: ${parseError.message}`);
-    }
-
-    const eventsUrl = `${ngrokUrl}/api/events`;
-    let updatedCount = 0;
-
-    if (manifest.features?.slash_commands) {
-      manifest.features.slash_commands.forEach((cmd: any) => {
-        if (cmd.url !== eventsUrl) {
-          cmd.url = eventsUrl;
-          updatedCount++;
+    const packageJson = JSON.parse(await fs.readFile('package.json', 'utf-8'));
+    const devScript = packageJson.scripts?.dev;
+    if (devScript) {
+      const portMatch = devScript.match(/--port\s+(\d+)/);
+      if (portMatch) {
+        const scriptPort = Number.parseInt(portMatch[1], 10);
+        if (!Number.isNaN(scriptPort) && scriptPort > 0) {
+          port = scriptPort;
         }
-      });
-    }
-
-    if (manifest.settings?.event_subscriptions?.request_url !== eventsUrl) {
-      if (manifest.settings?.event_subscriptions) {
-        manifest.settings.event_subscriptions.request_url = eventsUrl;
-        updatedCount++;
       }
     }
-
-    if (manifest.settings?.interactivity?.request_url !== eventsUrl) {
-      if (manifest.settings?.interactivity) {
-        manifest.settings.interactivity.request_url = eventsUrl;
-        updatedCount++;
-      }
-    }
-
-    fs.writeFileSync(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
-    console.log(`✅ Updated ${updatedCount} URL(s) in manifest.json`);
-
-    return true;
-  } catch (error: any) {
-    console.error("❌ Failed to update manifest.json:", error.message ?? String(error));
-    throw error;
-  }
-}
-
-function startNgrok(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    console.log("🔗 Starting ngrok tunnel...");
-    ngrokProcess = spawn("ngrok", ["http", NGROK_PORT.toString()], {
-      stdio: "pipe",
-      shell: false,
-    });
-
-    ngrokProcess.on("error", (error: Error) => {
-      console.error("❌ Failed to start ngrok:", (error as any).message ?? String(error));
-      console.error(
-        "   Make sure ngrok is installed: https://ngrok.com/download",
-      );
-      reject(error);
-    });
-
-    const pollNgrokUrl = (attempt = 1, maxAttempts = 10) => {
-      setTimeout(async () => {
-        try {
-          const res = await fetch(NGROK_API_URL);
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-          }
-          const response = await res.json() as any;
-          const httpsTunnel = response.tunnels?.find((t: any) => t.proto === "https");
-
-          if (httpsTunnel) {
-            const ngrokUrl = httpsTunnel.public_url as string;
-            console.log(`🌐 Ngrok tunnel ready: ${ngrokUrl}`);
-            resolve(ngrokUrl);
-          } else if (attempt < maxAttempts) {
-            console.log(
-              `   No HTTPS tunnel found yet (attempt ${attempt}/${maxAttempts})...`,
-            );
-            pollNgrokUrl(attempt + 1, maxAttempts);
-          } else {
-            const error = new Error(
-              "No HTTPS tunnel found after multiple attempts",
-            );
-            console.error("❌", error.message);
-            reject(error);
-          }
-        } catch (error) {
-          if (attempt < maxAttempts) {
-            console.log(
-              `   Waiting for ngrok to start (attempt ${attempt}/${maxAttempts})...`,
-            );
-            pollNgrokUrl(attempt + 1, maxAttempts);
-          } else {
-            console.error(
-              "❌ Failed to get ngrok URL after multiple attempts:",
-              (error as any).message ?? String(error),
-            );
-            console.error(
-              "   Make sure ngrok is running and accessible at localhost:4040",
-            );
-            reject(error);
-          }
-        }
-      }, attempt === 1 ? NGROK_STARTUP_DELAY : 2000);
-    };
-
-    pollNgrokUrl();
-  });
-}
-
-async function getExistingNgrokUrl(): Promise<string | undefined> {
-  try {
-    const res = await fetch(NGROK_API_URL);
-    if (!res.ok) return undefined;
-    const response = await res.json() as any;
-    const httpsTunnel = response.tunnels?.find((t: any) => t.proto === "https");
-    return httpsTunnel?.public_url as string | undefined;
   } catch {
-    return undefined;
+    // Silently ignore package.json read errors
   }
-}
 
-async function ensureNgrok(): Promise<string> {
-  const existingUrl = await getExistingNgrokUrl();
-  if (existingUrl) {
-    console.log(`🌐 Reusing existing ngrok tunnel: ${existingUrl}`);
-    ngrokStartedByUs = false;
-    return existingUrl;
-  }
-  const url = await startNgrok();
-  ngrokStartedByUs = true;
-  return url;
-}
+  return port;
+};
 
-async function startSlackApp(appId?: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!appId) {
-      console.log("🚀 Starting Slack app");
-    } else {
-      console.log(`🚀 Starting Slack app ${appId}...`);
-    }
+const isManifestConfigLocal = async (): Promise<boolean> => {
+  const manifest = JSON.parse(await fs.readFile(MANIFEST_CONFIG_PATH, 'utf-8'));
+  return manifest?.manifest?.source === 'local';
+};
 
-    if (appId) {
-      slackProcess = spawn("slack", ["run", "-a", appId], {
-        stdio: "inherit",
-        shell: false,
-      });
-    } else {
-      slackProcess = spawn("slack", ["run"], {
-        stdio: "inherit",
-        shell: false,
-      });
-    }
-
-    slackProcess.on("error", (error: Error) => {
-      console.error("❌ Failed to start Slack app:", (error as any).message ?? String(error));
-      console.error(
-        "   Make sure Slack CLI is installed: https://api.slack.com/automation/cli/install",
-      );
-      reject(error);
-    });
-
-    slackProcess.on("spawn", () => {
-      resolve();
-    });
-
-    slackProcess.on("exit", (code) => {
-      if (!isShuttingDown && code !== 0) {
-        console.error(`❌ Slack app exited unexpectedly with code ${code}`);
-      }
-    });
+const startNgrok = async (): Promise<ngrok.Listener> => {
+  return await ngrok.connect({
+    authtoken,
+    addr: await getDevPort(),
   });
-}
+};
 
-async function start(): Promise<void> {
+const backupManifest = async (manifestContent: string): Promise<void> => {
   try {
-    augmentPathForBrew();
-
-    const [hasSlackCli, hasNgrokBinary] = await Promise.all([
-      checkBinaryAvailable("slack", ["--version"]),
-      checkBinaryAvailable("ngrok", ["version"]),
-    ]);
-
-    if (!hasSlackCli) {
-      throw new Error(
-        "Slack CLI not found in PATH. Install: https://api.slack.com/automation/cli/install",
-      );
-    }
-
-    if (!hasNgrokBinary) {
-      console.warn(
-        "⚠️ ngrok binary not found in PATH. If an ngrok daemon is already running at localhost:4040, we'll reuse it.",
-      );
-    }
-
-    const ngrokUrl = await ensureNgrok();
-
-    await updateManifest(ngrokUrl);
-
-    const appId = (() => {
-      if (process.env.SLACK_APP_ID) return process.env.SLACK_APP_ID;
-      const devPath = path.join(__dirname, "..", ".slack", "apps.dev.json");
-      const prodPath = path.join(__dirname, "..", ".slack", "apps.json");
-      for (const p of [devPath, prodPath]) {
-        if (fs.existsSync(p)) {
-          try {
-            const apps = JSON.parse(fs.readFileSync(p, "utf8"));
-            const firstKey = Object.keys(apps)[0];
-            return firstKey ? apps[firstKey]?.app_id as string | undefined : undefined;
-          } catch {}
-        }
-      }
-      return undefined;
-    })();
-
-    await startSlackApp(appId);
-  } catch (error: any) {
-    console.error(
-      "\n❌ Failed to start development environment:",
-      error.message ?? String(error),
-    );
-    cleanup();
-    process.exit(1);
+    await fs.writeFile(TEMP_MANIFEST_PATH, manifestContent);
+  } catch (error) {
+    throw new Error(`Failed to backup manifest: ${error instanceof Error ? error.message : String(error)}`);
   }
+};
+
+const removeTempManifest = async (): Promise<void> => {
+  try {
+    await fs.unlink(TEMP_MANIFEST_PATH);
+  } catch {
+    // Silently ignore if temp file doesn't exist
+  }
+};
+
+const restoreManifest = async (): Promise<void> => {
+  try {
+    const manifest = await fs.readFile(TEMP_MANIFEST_PATH, 'utf-8');
+    await fs.writeFile(MANIFEST_PATH, manifest);
+  } catch (error) {
+    throw new Error(`Failed to restore manifest: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+interface ManifestUpdateResult {
+  updated: boolean;
+  originalContent: string;
 }
 
-start();
+interface SlackManifest {
+  features: {
+    slash_commands: Array<{ url: string }>;
+  };
+  settings: {
+    event_subscriptions: { request_url: string };
+    interactivity: { request_url: string };
+  };
+}
 
+const updateManifestUrls = (manifest: SlackManifest, newUrl: string): void => {
+  manifest.features.slash_commands[0].url = newUrl;
+  manifest.settings.event_subscriptions.request_url = newUrl;
+  manifest.settings.interactivity.request_url = newUrl;
+};
 
+const updateManifest = async (url: string | null): Promise<ManifestUpdateResult> => {
+  if (!url) return { updated: false, originalContent: '' };
+
+  try {
+    const file = await fs.readFile(MANIFEST_PATH, 'utf-8');
+    const manifest: SlackManifest = JSON.parse(file);
+
+    const newUrl = `${url}${SLACK_EVENTS_PATH}`;
+    const currentUrl = manifest.settings.event_subscriptions.request_url;
+
+    // Skip if URL hasn't changed
+    if (currentUrl === newUrl) {
+      return { updated: false, originalContent: '' };
+    }
+
+    updateManifestUrls(manifest, newUrl);
+
+    await fs.writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
+    return { updated: true, originalContent: file };
+  } catch (error) {
+    throw new Error(`Failed to update manifest: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+const cleanup = async (client: ngrok.Listener | null, manifestWasUpdated: boolean) => {
+  if (client) {
+    await client.close();
+  }
+  if (manifestWasUpdated) {
+    await restoreManifest();
+    await removeTempManifest();
+  }
+};
+
+const runDevCommand = () => {
+  return spawn('pnpm', ['dev'], { stdio: 'inherit' });
+};
+
+const main = async () => {
+  let client: ngrok.Listener | null = null;
+  let manifestWasUpdated = false;
+  let isCleaningUp = false;
+
+  const handleExit = async () => {
+    if (isCleaningUp) return;
+    isCleaningUp = true;
+    await cleanup(client, manifestWasUpdated);
+    process.exit(0);
+  };
+
+  process.on('SIGINT', handleExit);
+  process.on('SIGTERM', handleExit);
+
+  try {
+    client = await startNgrok();
+
+    // Update manifest and backup original content in one pass
+    const { updated, originalContent } = await updateManifest(client.url());
+    manifestWasUpdated = updated;
+
+    if (manifestWasUpdated) {
+      await backupManifest(originalContent);
+    }
+
+    console.log(
+      chalk.gray('✨ Manifest is set to local in .slack/config.json. Webhook events will be sent to your local tunnel URL: ') +
+      chalk.cyan(`${client.url()}/api/slack/events`)
+    );
+    const devProcess = runDevCommand();
+
+    // Keep the script running while pnpm dev is active
+    await new Promise<void>((resolve) => {
+      devProcess.on('exit', () => {
+        resolve();
+      });
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error starting ngrok tunnel:', error.message);
+    } else {
+      console.error('Error starting ngrok tunnel:', error);
+    }
+  } finally {
+    if (!isCleaningUp) {
+      await cleanup(client, manifestWasUpdated);
+    }
+  }
+};
+
+const runDevWithExit = () => {
+  const devProcess = runDevCommand();
+
+  const handleExit = () => {
+    if (devProcess) {
+      devProcess.kill('SIGINT');
+    }
+    process.exit(0);
+  };
+
+  process.on('SIGINT', handleExit);
+  process.on('SIGTERM', handleExit);
+};
+
+(async () => {
+  const manifestIsLocal = await isManifestConfigLocal();
+
+  if (manifestIsLocal && authtoken) {
+    // Token and manifest is local - proceed as normal
+    main();
+  } else if (manifestIsLocal && !authtoken) {
+    // No token but manifest is local - dev has messed up, don't do local and warn them
+    console.warn(
+      chalk.yellow.italic('⚠  Manifest is set to local in .slack/config.json but NGROK_AUTH_TOKEN is missing. Webhook events will not be sent to your local server.')
+    );
+    runDevWithExit();
+  } else {
+    // Manifest isn't local - warn it isn't
+    console.warn(
+      chalk.yellow.italic('⚠  Manifest is set to remote in .slack/config.json. Change the manifest source to local to send webhook events to your local server.')
+    );
+    runDevWithExit();
+  }
+})();
