@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import ngrok from '@ngrok/ngrok';
 import dotenv from 'dotenv';
+import chalk from 'chalk';
 
 dotenv.config({ path: '.env', quiet: true });
 
@@ -167,8 +168,8 @@ const main = async () => {
     }
 
     console.log(
-      '\x1b[90m✨ Manifest is set to local in .slack/config.json. Webhook events will be sent to your local tunnel URL: \x1b[36m%s\x1b[0m',
-      `${client.url()}/api/slack/events`,
+      chalk.gray('✨ Manifest is set to local in .slack/config.json. Webhook events will be sent to your local tunnel URL: ') +
+      chalk.cyan(`${client.url()}/api/slack/events`)
     );
     const devProcess = runDevCommand();
 
@@ -214,15 +215,13 @@ const runDevWithExit = () => {
   } else if (manifestIsLocal && !authtoken) {
     // No token but manifest is local - dev has messed up, don't do local and warn them
     console.warn(
-      '\x1b[33m\x1b[3m%s\x1b[0m',
-      '⚠  Manifest is set to local in .slack/config.json but NGROK_AUTH_TOKEN is missing. Webhook events will not be sent to your local server.',
+      chalk.yellow.italic('⚠  Manifest is set to local in .slack/config.json but NGROK_AUTH_TOKEN is missing. Webhook events will not be sent to your local server.')
     );
     runDevWithExit();
   } else {
     // Manifest isn't local - warn it isn't
     console.warn(
-      '\x1b[33m\x1b[3m%s\x1b[0m',
-      '⚠  Manifest is set to remote in .slack/config.json. Webhook events will not be sent to your local server.',
+      chalk.yellow.italic('⚠  Manifest is set to remote in .slack/config.json. Change the manifest source to local to send webhook events to your local server.')
     );
     runDevWithExit();
   }
