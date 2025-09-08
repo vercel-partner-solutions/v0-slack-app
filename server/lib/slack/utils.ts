@@ -237,7 +237,3 @@ export const MessageState = {
     });
   },
 };
-
-export const getLastAssistantMessage = (messages: SlackUIMessage[]) => {
-  return messages.findLast((message) => message.role === "assistant");
-};
