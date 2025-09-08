@@ -1,29 +1,21 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
+import type { GenericMessageEvent } from "@slack/web-api";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { extractV0Summary } from "~/lib/ai/utils";
-import {
-  getLastAssistantMessage,
-  getThreadContextAsModelMessage,
-  type SlackUIMessage,
-  updateAgentStatus,
-} from "~/lib/slack/utils";
+import { updateAgentStatus } from "~/lib/slack/utils";
 
+const PROJECT_ID = "PHodj8mYCm1";
+
+/**
+ * Handles direct message events in Slack threads
+ */
 export const directMessageCallback = async ({
-  message,
   say,
   logger,
-  context,
-  client,
-}: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
-  // @ts-expect-error
-  const { channel, thread_ts, text } = message;
-  const { botId } = context;
-  let isNewChat = false;
-  let v0ChatId = null;
-  let demoUrl = null;
-  let summary = null;
-
-  if (!text) return;
+  event,
+}: AllMiddlewareArgs &
+  SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
+  const { channel, thread_ts, text } = event;
 
   updateAgentStatus({
     channel,
@@ -31,99 +23,43 @@ export const directMessageCallback = async ({
     status: "is typing...",
   });
 
-  let messages: SlackUIMessage[] = [];
   try {
-    if (thread_ts) {
-      messages = await getThreadContextAsModelMessage({
-        channel,
-        ts: thread_ts,
-        botId,
-        include_all_metadata: true,
-      });
+    const redis = useStorage("redis");
+    const chatKey = `chat:${thread_ts}`;
+    const existingChatId = (await redis.get(chatKey)) as string | null;
+
+    const demoUrl = null;
+    let v0Chat: ChatDetail;
+
+    if (existingChatId) {
+      v0Chat = (await v0.chats.sendMessage({
+        chatId: existingChatId,
+        message: text,
+        responseMode: "sync",
+      })) as ChatDetail;
     } else {
-      messages = [
-        {
-          role: "user",
-          content: text,
-        },
-      ];
+      v0Chat = (await v0.chats.create({
+        message: text,
+        projectId: PROJECT_ID,
+        responseMode: "sync",
+      })) as ChatDetail;
+
+      await redis.set(chatKey, v0Chat.id);
     }
 
-    if (
-      messages[0].content === "New Assistant Thread" &&
-      messages.length === 2
-    ) {
-      isNewChat = true;
-    } else {
-      isNewChat = false;
-    }
-
-    if (isNewChat) {
-      await v0.chats
-        .create({
-          message: text,
-          projectId: "PHodj8mYCm1",
-          responseMode: "sync",
-        })
-        .then((chat: ChatDetail) => {
-          v0ChatId = chat.id;
-          demoUrl = chat.latestVersion.demoUrl;
-          summary = extractV0Summary(
-            chat.messages[chat.messages.length - 1].content,
-          );
-
-          client.assistant.threads.setTitle({
-            channel_id: channel,
-            thread_ts: thread_ts || message.ts,
-            title: chat.name,
-          });
-        });
-    } else {
-      const lastAssistantMessage = getLastAssistantMessage(messages);
-      if (lastAssistantMessage?.metadata?.event_payload?.chat_id) {
-        v0ChatId = lastAssistantMessage.metadata.event_payload.chat_id;
-      }
-      await v0.chats
-        .sendMessage({
-          chatId: v0ChatId,
-          message: text,
-        })
-        .then((message: ChatDetail) => {
-          summary = extractV0Summary(
-            message.messages[message.messages.length - 1].content,
-          );
-          demoUrl = message.latestVersion.demoUrl;
-        });
-    }
+    const lastMessage = v0Chat.messages[v0Chat.messages.length - 1];
+    const summary = extractV0Summary(lastMessage.content);
 
     await say({
-      blocks: [
-        {
-          type: "markdown",
-          text: summary,
-        },
-        {
-          type: "divider",
-        },
-        {
-          type: "markdown",
-          text: `<${demoUrl}|View demo>`,
-        },
-      ],
-      text: summary,
-      metadata: {
-        event_payload: {
-          chat_id: v0ChatId,
-        },
-        event_type: "v0_chat_created",
-      },
-      thread_ts: thread_ts || message.ts,
+      text: `${summary}\n\n${demoUrl ? `<${demoUrl}|View demo>` : ""}`,
+      thread_ts,
     });
   } catch (error) {
-    logger.error("DM handler failed:", error);
+    logger.error("Direct message handler failed:", error);
+
     await say({
       text: "Sorry, something went wrong processing your message. Please try again.",
-      thread_ts: thread_ts || message.ts,
+      thread_ts,
     });
   }
 };
