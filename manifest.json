@@ -1,9 +1,7 @@
 {
   "display_information": {
-    "name": "v0 Agent (local)",
-    "description": "Turn your ideas into real web apps with v0.",
+    "name": "Slack Agent",
     "background_color": "#000000",
-    "long_description": "v0 turns your ideas into real web apps, no coding required. Describe what you want with natural language, and v0's intelligent agent builds it for you using modern frontend tools. v0 can search the web, inspect sites, automatically fix errors, and integrate with external tools. By removing the technical barriers to web development, anyone can go from concept to working software in minutes."
   },
   "features": {
     "app_home": {
@@ -12,7 +10,7 @@
       "messages_tab_read_only_enabled": false
     },
     "bot_user": {
-      "display_name": "v0 Agent (local)",
+      "display_name": "Slack Agent",
       "always_online": true
     },
     "shortcuts": [
@@ -32,7 +30,7 @@
       }
     ],
     "assistant_view": {
-      "assistant_description": "v0 turns your ideas into real web apps, no coding required. Describe what you want with natural language, and v0's intelligent agent builds it for you using modern frontend tools. v0 can search the web, inspect sites, automatically fix errors, and integrate with external tools."
+      "assistant_description": "Slack agent description"
     }
   },
   "oauth_config": {
