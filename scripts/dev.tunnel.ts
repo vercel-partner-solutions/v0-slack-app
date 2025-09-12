@@ -98,7 +98,10 @@ interface SlackManifest {
 }
 
 const updateManifestUrls = (manifest: SlackManifest, newUrl: string): void => {
-  manifest.features.slash_commands[0].url = newUrl;
+  // Update all slash commands
+  manifest.features.slash_commands.forEach(command => {
+    command.url = newUrl;
+  });
   manifest.settings.event_subscriptions.request_url = newUrl;
   manifest.settings.interactivity.request_url = newUrl;
 };
