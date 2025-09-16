@@ -1,8 +1,8 @@
 import type { App } from "@slack/bolt";
-import { loginCommandCallback } from "./login-command";
+import { signInCommandCallback } from "./sign-in-command";
 
 const register = (app: App) => {
-  app.command("/sign-in", loginCommandCallback);
+  app.command("/sign-in", signInCommandCallback);
 };
 
 export default { register };

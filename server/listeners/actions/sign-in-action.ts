@@ -1,13 +1,16 @@
-import type { AllMiddlewareArgs, BlockAction, SlackActionMiddlewareArgs } from "@slack/bolt";
+import type {
+  AllMiddlewareArgs,
+  BlockAction,
+  SlackActionMiddlewareArgs,
+} from "@slack/bolt";
 
 export const signInActionCallback = async ({
-    ack,
-    logger,
+  ack,
+  logger,
 }: AllMiddlewareArgs & SlackActionMiddlewareArgs<BlockAction>) => {
-    try {
-        await ack();
-    } catch (error) {
-        logger.error("Login action callback failed:", error);
-    }
-}
-
+  try {
+    await ack();
+  } catch (error) {
+    logger.error("Login action callback failed:", error);
+  }
+};

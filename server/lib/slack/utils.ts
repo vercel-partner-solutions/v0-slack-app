@@ -283,3 +283,15 @@ export const getMessagesFromEvent = async (
   }
   return messages;
 };
+
+export const redirectToSlackHome = (
+  event: H3Event<EventHandlerRequest>,
+  teamId: string,
+  appId: string,
+) => {
+  return sendRedirect(
+    event,
+    `slack://app?team=${teamId}&id=${appId}&tab=home`,
+    302,
+  );
+};
