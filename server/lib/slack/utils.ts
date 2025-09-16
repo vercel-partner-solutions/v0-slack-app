@@ -5,6 +5,7 @@ import type {
 } from "@slack/web-api";
 import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsHistoryResponse";
 import type { ModelMessage } from "ai";
+import type { EventHandlerRequest, H3Event } from "h3";
 import { app } from "~/app";
 
 /**
@@ -225,4 +226,16 @@ export const MessageState = {
       name: "x",
     });
   },
+};
+
+export const redirectToSlackHome = (
+  event: H3Event<EventHandlerRequest>,
+  teamId: string,
+  appId: string,
+) => {
+  return sendRedirect(
+    event,
+    `slack://app?team=${teamId}&id=${appId}&tab=home`,
+    302,
+  );
 };
