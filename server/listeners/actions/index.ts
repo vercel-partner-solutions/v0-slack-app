@@ -1,9 +1,8 @@
 import type { App } from "@slack/bolt";
-
-import sampleActionCallback from "./sample-action";
+import { signInActionCallback } from "./sign-in-action";
 
 const register = (app: App) => {
-  app.action("sample_action_id", sampleActionCallback);
+  app.action("sign-in-action", signInActionCallback);
 };
 
 export default { register };
