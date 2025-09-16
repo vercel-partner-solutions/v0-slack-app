@@ -23,9 +23,9 @@
     ],
     "slash_commands": [
       {
-        "command": "/sample-command",
-        "url": "https://flavourful-irena-undappled.ngrok-free.dev/api/slack/events",
-        "description": "Runs a sample command",
+        "command": "/sign-in",
+        "url": "https://your-app-domain/api/slack/events",
+        "description": "Sign in to v0",
         "should_escape": false
       }
     ],
