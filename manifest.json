@@ -1,6 +1,6 @@
 {
   "display_information": {
-    "name": "Slack Agent",
+    "name": "v0",
     "background_color": "#000000"
   },
   "features": {
@@ -10,7 +10,7 @@
       "messages_tab_read_only_enabled": false
     },
     "bot_user": {
-      "display_name": "Slack Agent",
+      "display_name": "v0",
       "always_online": true
     },
     "shortcuts": [

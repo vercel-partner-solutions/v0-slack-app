@@ -1,6 +1,8 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
-import type { ModelMessage } from "ai";
-import { respondToMessage } from "~/lib/ai/respond-to-message";
+import { generateObject, type ModelMessage } from "ai";
+import { type ChatDetail, v0 } from "v0-sdk";
+import { z } from "zod";
+import { extractV0Summary } from "~/lib/ai/utils";
 import {
   getThreadContextAsModelMessage,
   MessageState,
@@ -22,11 +24,12 @@ const appMentionCallback = async ({
     });
 
     let messages: ModelMessage[] = [];
+
     if (thread_ts) {
       updateAgentStatus({
         channel,
         thread_ts,
-        status: "is typing...",
+        status: "is thinking...",
       });
       messages = await getThreadContextAsModelMessage({
         channel,
@@ -42,24 +45,51 @@ const appMentionCallback = async ({
       ];
     }
 
-    const response = await respondToMessage({
+    const { object } = await generateObject({
+      model: "openai/gpt-4o-mini",
+      system: `
+      Take these messages and generate a prompt and title that will be given to v0, a generative UI tool.
+      `,
       messages,
-      channel,
-      thread_ts,
-      botId: context.botId,
-      event,
+      schema: z.object({
+        prompt: z.string().describe("The prompt for the v0 chat"),
+        title: z.string().describe("The title of the v0 project"),
+      }),
     });
 
+    const redis = useStorage("redis");
+    const chatKey = `chat:${thread_ts}`;
+    const existingChatId = (await redis.get(chatKey)) as string | null;
+
+    let demoUrl = null;
+    let v0Chat: ChatDetail;
+
+    if (existingChatId) {
+      v0Chat = (await v0.chats.sendMessage({
+        chatId: existingChatId,
+        message: object.prompt,
+        responseMode: "sync",
+      })) as ChatDetail;
+    } else {
+      const projectId = await v0.projects.create({
+        name: object.title,
+      });
+      v0Chat = (await v0.chats.create({
+        message: object.prompt,
+        projectId: projectId.id,
+        responseMode: "sync",
+      })) as ChatDetail;
+
+      await redis.set(chatKey, v0Chat.id);
+    }
+
+    const lastMessage = v0Chat.messages[v0Chat.messages.length - 1];
+    const summary = extractV0Summary(lastMessage.content);
+    demoUrl = v0Chat.latestVersion?.demoUrl;
+
     await say({
-      blocks: [
-        {
-          type: "markdown",
-          text: response,
-        },
-      ],
-      // It's important to keep the text property as a fallback for improper markdown
-      text: response,
-      thread_ts: event.thread_ts || event.ts,
+      text: `${summary}\n\n${demoUrl ? `<${demoUrl}|View demo>` : ""}`,
+      thread_ts,
     });
 
     // Set completed state

@@ -19,22 +19,22 @@ import { app } from "~/app";
  */
 export const onlyChannelType =
   (type: SlackEventMiddlewareArgs<"message">["event"]["channel_type"]) =>
-    /**
-     * Middleware that proceeds only when the incoming message is in the specified channel type.
-     *
-     * Channel types include: "im" (DM), "group" (private channel), "mpim" (multi-person DM), and "channel" (public channel).
-     *
-     * @param {SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs} args - Handler args containing the Slack event and next callback.
-     * @returns {Promise<void>} Resolves after conditionally calling `next()`.
-     */
-    async ({
-      event,
-      next,
-    }: SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs) => {
-      if (event.channel_type === type) {
-        await next();
-      }
-    };
+  /**
+   * Middleware that proceeds only when the incoming message is in the specified channel type.
+   *
+   * Channel types include: "im" (DM), "group" (private channel), "mpim" (multi-person DM), and "channel" (public channel).
+   *
+   * @param {SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs} args - Handler args containing the Slack event and next callback.
+   * @returns {Promise<void>} Resolves after conditionally calling `next()`.
+   */
+  async ({
+    event,
+    next,
+  }: SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs) => {
+    if (event.channel_type === type) {
+      await next();
+    }
+  };
 
 export const updateAgentStatus = async ({
   channel,
@@ -88,7 +88,8 @@ export const getThreadContextAsModelMessage = async (
 
   return messages.map((message) => {
     // @ts-expect-error
-    const { bot_id, text, user, ts, thread_ts, type, subtype, metadata } = message;
+    const { bot_id, text, user, ts, thread_ts, type, subtype, metadata } =
+      message;
     return {
       role: bot_id === botId ? "assistant" : "user",
       content: text,
