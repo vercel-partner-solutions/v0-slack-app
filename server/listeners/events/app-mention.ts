@@ -53,7 +53,11 @@ const appMentionCallback = async ({
       messages,
       schema: z.object({
         prompt: z.string().describe("The prompt for the v0 chat"),
-        title: z.string().describe("The title of the v0 project"),
+        title: z
+          .string()
+          .describe("The title of the v0 project")
+          .min(20)
+          .max(29),
       }),
     });
 
@@ -73,6 +77,8 @@ const appMentionCallback = async ({
     } else {
       const projectId = await v0.projects.create({
         name: `🤖 ${object.title}`,
+        instructions:
+          "Do not use integrations in this project. Always skip the integrations step.",
       });
       v0Chat = (await v0.chats.create({
         message: object.prompt,

@@ -12,9 +12,14 @@ export const directMessageCallback = async ({
   say,
   logger,
   event,
+  client,
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
   const { channel, thread_ts, text } = event;
+
+  if (!text) {
+    return;
+  }
 
   updateAgentStatus({
     channel,
@@ -37,15 +42,26 @@ export const directMessageCallback = async ({
         responseMode: "sync",
       })) as ChatDetail;
     } else {
-      const projectTitle = await generateText({
+      const { text: title } = await generateText({
         model: "openai/gpt-4o-mini",
         system: `
-        Take these messages and generate a title for the v0 project.
+        Take these messages and generate a title that will be given to v0, a generative UI tool. The title should be concise and relevant to the conversation.
+        The title should be no more than 29 characters.
         `,
         messages: [{ role: "user", content: text }],
       });
+
+      const titleWithPrefix = `🤖 ${title}`;
+
       const projectId = await v0.projects.create({
-        name: `🤖 ${projectTitle.text}`,
+        name: titleWithPrefix,
+        instructions:
+          "Do not use integrations in this project. Always skip the integrations step.",
+      });
+      await client.assistant.threads.setTitle({
+        channel_id: channel,
+        thread_ts,
+        title: titleWithPrefix,
       });
       v0Chat = (await v0.chats.create({
         message: text,
