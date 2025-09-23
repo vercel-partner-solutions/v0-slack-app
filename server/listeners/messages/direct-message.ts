@@ -28,7 +28,7 @@ export const directMessageCallback = async ({
     const chatKey = `chat:${thread_ts}`;
     const existingChatId = (await redis.get(chatKey)) as string | null;
 
-    const demoUrl = null;
+    let demoUrl = null;
     let v0Chat: ChatDetail;
 
     if (existingChatId) {
@@ -49,6 +49,7 @@ export const directMessageCallback = async ({
 
     const lastMessage = v0Chat.messages[v0Chat.messages.length - 1];
     const summary = extractV0Summary(lastMessage.content);
+    demoUrl = v0Chat.latestVersion?.demoUrl;
 
     await say({
       text: `${summary}\n\n${demoUrl ? `<${demoUrl}|View demo>` : ""}`,
