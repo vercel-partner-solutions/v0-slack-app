@@ -2,7 +2,7 @@ import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import { generateObject, type ModelMessage } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { z } from "zod";
-import { extractV0Summary } from "~/lib/ai/utils";
+import { cleanV0Stream } from "~/lib/ai/utils";
 import {
   getThreadContextAsModelMessage,
   MessageState,
@@ -89,12 +89,21 @@ const appMentionCallback = async ({
       await redis.set(chatKey, v0Chat.id);
     }
 
-    const lastMessage = v0Chat.messages[v0Chat.messages.length - 1];
-    const summary = extractV0Summary(lastMessage.content);
+    let summary = cleanV0Stream(v0Chat.text);
     demoUrl = v0Chat.latestVersion?.demoUrl;
 
+    if (demoUrl) {
+      summary += `\n\n<${demoUrl}|View demo>`;
+    }
+
     await say({
-      text: `${summary}\n\n${demoUrl ? `<${demoUrl}|View demo>` : ""}`,
+      blocks: [
+        {
+          type: "markdown",
+          text: summary,
+        },
+      ],
+      text: summary,
       thread_ts,
     });
 
