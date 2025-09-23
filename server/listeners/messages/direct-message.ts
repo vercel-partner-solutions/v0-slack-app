@@ -1,10 +1,9 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { GenericMessageEvent } from "@slack/web-api";
+import { generateText } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { extractV0Summary } from "~/lib/ai/utils";
 import { updateAgentStatus } from "~/lib/slack/utils";
-
-const PROJECT_ID = "PHodj8mYCm1";
 
 /**
  * Handles direct message events in Slack threads
@@ -38,9 +37,19 @@ export const directMessageCallback = async ({
         responseMode: "sync",
       })) as ChatDetail;
     } else {
+      const projectTitle = await generateText({
+        model: "openai/gpt-4o-mini",
+        system: `
+        Take these messages and generate a title for the v0 project.
+        `,
+        messages: [{ role: "user", content: text }],
+      });
+      const projectId = await v0.projects.create({
+        name: `🤖 ${projectTitle.text}`,
+      });
       v0Chat = (await v0.chats.create({
         message: text,
-        projectId: PROJECT_ID,
+        projectId: projectId.id,
         responseMode: "sync",
       })) as ChatDetail;
 

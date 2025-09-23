@@ -72,7 +72,7 @@ const appMentionCallback = async ({
       })) as ChatDetail;
     } else {
       const projectId = await v0.projects.create({
-        name: object.title,
+        name: `🤖 ${object.title}`,
       });
       v0Chat = (await v0.chats.create({
         message: object.prompt,
