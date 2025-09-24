@@ -2,12 +2,13 @@ import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import { generateObject, type ModelMessage } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { z } from "zod";
-import { cleanV0Stream } from "~/lib/ai/utils";
+import { getExistingChat, setExistingChat } from "~/lib/redis";
 import {
   getThreadContextAsModelMessage,
   MessageState,
   updateAgentStatus,
 } from "~/lib/slack/utils";
+import { cleanV0Stream } from "~/lib/v0/utils";
 
 const appMentionCallback = async ({
   event,
@@ -61,9 +62,7 @@ const appMentionCallback = async ({
       }),
     });
 
-    const redis = useStorage("redis");
-    const chatKey = `chat:${thread_ts}`;
-    const existingChatId = (await redis.get(chatKey)) as string | null;
+    const existingChatId = await getExistingChat(thread_ts);
 
     let demoUrl = null;
     let v0Chat: ChatDetail;
@@ -86,7 +85,7 @@ const appMentionCallback = async ({
         responseMode: "sync",
       })) as ChatDetail;
 
-      await redis.set(chatKey, v0Chat.id);
+      await setExistingChat(thread_ts, v0Chat.id);
     }
 
     let summary = cleanV0Stream(v0Chat.text);

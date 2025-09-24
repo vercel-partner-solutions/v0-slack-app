@@ -7,10 +7,10 @@ import type { GenericMessageEvent, WebClient } from "@slack/web-api";
 import { generateText } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
-import { cleanV0Stream } from "~/lib/ai/utils";
+import { getExistingChat, setExistingChat } from "~/lib/redis";
 import { updateAgentStatus } from "~/lib/slack/utils";
+import { cleanV0Stream } from "~/lib/v0/utils";
 
-const CHAT_KEY_PREFIX = "chat:";
 const TITLE_MAX_LENGTH = 29;
 const TITLE_PREFIX = "🤖";
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
@@ -18,7 +18,6 @@ const DEFAULT_ERROR_MESSAGE =
   "Sorry, something went wrong processing your message. Please try again.";
 const PROJECT_INSTRUCTIONS =
   "Do not use integrations in this project. Always skip the integrations step.";
-const redis = useStorage("redis");
 
 export const directMessageCallback = async ({
   say,
@@ -44,15 +43,15 @@ export const directMessageCallback = async ({
 
     let v0Chat: ChatDetail;
 
-    const { exists, chatId } = await doesChatExist(thread_ts);
+    const chatId = await getExistingChat(thread_ts);
 
-    if (exists && chatId) {
+    if (chatId) {
       v0Chat = await sendToExistingChat(chatId, text);
     } else {
       v0Chat = await createNewChat(text, client, channel, thread_ts);
     }
 
-    const summary = formatResponse(v0Chat);
+    const summary = cleanV0Stream(v0Chat.text);
     const webUrl = v0Chat.webUrl || `https://v0.dev/chat/${v0Chat.id}`;
     const demoUrl = v0Chat.latestVersion?.demoUrl;
 
@@ -125,9 +124,7 @@ const createNewChat = async (
     responseMode: "sync",
   })) as ChatDetail;
 
-  redis
-    .set(`${CHAT_KEY_PREFIX}${thread_ts}`, v0Chat.id)
-    .catch((error) => app.logger.error("Failed to cache chat ID:", error));
+  setExistingChat(thread_ts, v0Chat.id);
 
   return v0Chat;
 };
@@ -141,10 +138,6 @@ const sendToExistingChat = async (
     message: text,
     responseMode: "sync",
   })) as ChatDetail;
-};
-
-const formatResponse = (v0Chat: ChatDetail): string => {
-  return cleanV0Stream(v0Chat.text);
 };
 
 const sendSlackResponse = async (
@@ -196,21 +189,4 @@ const sendSlackResponse = async (
     text: summary,
     thread_ts,
   });
-};
-
-const doesChatExist = async (
-  thread_ts: string,
-): Promise<{ exists: boolean; chatId: string | null }> => {
-  const chatKey = `${CHAT_KEY_PREFIX}${thread_ts}`;
-  try {
-    const existingChatId = await redis.get(chatKey);
-    if (!existingChatId) return { exists: false, chatId: null };
-    return {
-      exists: true,
-      chatId: existingChatId as string,
-    };
-  } catch (error) {
-    app.logger.error("Failed to check if chat exists:", error);
-    return { exists: false, chatId: null };
-  }
 };
