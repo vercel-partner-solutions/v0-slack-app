@@ -35,12 +35,12 @@ export const directMessageCallback = async ({
       return;
     }
 
-    // immediately update the thread status, don't await and block the thread
+    // Fire-and-forget status update to avoid blocking
     updateAgentStatus({
       channel,
       thread_ts,
       status: "is thinking...",
-    });
+    }).catch((error) => logger.warn("Failed to update agent status:", error));
 
     let v0Chat: ChatDetail;
 
@@ -54,7 +54,7 @@ export const directMessageCallback = async ({
 
     const summary = formatResponse(v0Chat);
     const webUrl = v0Chat.webUrl || `https://v0.dev/chat/${v0Chat.id}`;
-    const demoUrl = v0Chat.latestVersion?.demoUrl || "";
+    const demoUrl = v0Chat.latestVersion?.demoUrl;
 
     await sendSlackResponse(say, summary, thread_ts, webUrl, demoUrl);
   } catch (error) {
@@ -107,16 +107,17 @@ const createNewChat = async (
 ): Promise<ChatDetail> => {
   const titleWithPrefix = await generateChatTitle(text);
 
-  const projectId = await v0.projects.create({
-    name: titleWithPrefix,
-    instructions: PROJECT_INSTRUCTIONS,
-  });
-
-  await client.assistant.threads.setTitle({
-    channel_id: channel,
-    thread_ts,
-    title: titleWithPrefix,
-  });
+  const [projectId] = await Promise.all([
+    v0.projects.create({
+      name: titleWithPrefix,
+      instructions: PROJECT_INSTRUCTIONS,
+    }),
+    client.assistant.threads.setTitle({
+      channel_id: channel,
+      thread_ts,
+      title: titleWithPrefix,
+    }),
+  ]);
 
   const v0Chat = (await v0.chats.create({
     message: text,
@@ -124,7 +125,9 @@ const createNewChat = async (
     responseMode: "sync",
   })) as ChatDetail;
 
-  await redis.set(`${CHAT_KEY_PREFIX}${thread_ts}`, v0Chat.id);
+  redis
+    .set(`${CHAT_KEY_PREFIX}${thread_ts}`, v0Chat.id)
+    .catch((error) => app.logger.error("Failed to cache chat ID:", error));
 
   return v0Chat;
 };
@@ -202,9 +205,8 @@ const doesChatExist = async (
   try {
     const existingChatId = await redis.get(chatKey);
     if (!existingChatId) return { exists: false, chatId: null };
-    const v0Chat = await v0.chats.getById({ chatId: existingChatId as string });
     return {
-      exists: v0Chat?.id === existingChatId,
+      exists: true,
       chatId: existingChatId as string,
     };
   } catch (error) {
