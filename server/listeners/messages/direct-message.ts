@@ -3,7 +3,11 @@ import type {
   SayFn,
   SlackEventMiddlewareArgs,
 } from "@slack/bolt";
-import type { GenericMessageEvent, WebClient } from "@slack/web-api";
+import type {
+  ActionsBlockElement,
+  GenericMessageEvent,
+  WebClient,
+} from "@slack/web-api";
 import { generateText } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
@@ -163,7 +167,7 @@ const sendChatResponseToSlack = async (
   webUrl?: string,
   demoUrl?: string,
 ): Promise<void> => {
-  const actions = [];
+  const actions: ActionsBlockElement[] = [];
 
   if (webUrl) {
     actions.push({
@@ -174,6 +178,7 @@ const sendChatResponseToSlack = async (
       },
       url: webUrl,
       action_id: "open_in_v0",
+      value: webUrl,
     });
   }
   if (demoUrl) {
@@ -185,6 +190,7 @@ const sendChatResponseToSlack = async (
       },
       url: demoUrl,
       action_id: "view_demo",
+      value: demoUrl,
     });
   }
 
