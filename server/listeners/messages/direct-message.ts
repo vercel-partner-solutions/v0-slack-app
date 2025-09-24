@@ -20,6 +20,53 @@ const PROJECT_INSTRUCTIONS =
   "Do not use integrations in this project. Always skip the integrations step.";
 const redis = useStorage("redis");
 
+export const directMessageCallback = async ({
+  say,
+  logger,
+  event,
+  client,
+}: AllMiddlewareArgs &
+  SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
+  const { channel, thread_ts } = event;
+
+  try {
+    const text = validateMessageEvent(event);
+    if (!text) {
+      return;
+    }
+
+    // immediately update the thread status, don't await and block the thread
+    updateAgentStatus({
+      channel,
+      thread_ts,
+      status: "is thinking...",
+    });
+
+    let v0Chat: ChatDetail;
+
+    const { exists, chatId } = await doesChatExist(thread_ts);
+
+    if (exists && chatId) {
+      v0Chat = await sendToExistingChat(chatId, text);
+    } else {
+      v0Chat = await createNewChat(text, client, channel, thread_ts);
+    }
+
+    const summary = formatResponse(v0Chat);
+    const webUrl = v0Chat.webUrl || `https://v0.dev/chat/${v0Chat.id}`;
+    const demoUrl = v0Chat.latestVersion?.demoUrl || "";
+
+    await sendSlackResponse(say, summary, thread_ts, webUrl, demoUrl);
+  } catch (error) {
+    logger.error("Direct message handler failed:", error);
+
+    await say({
+      text: DEFAULT_ERROR_MESSAGE,
+      thread_ts,
+    });
+  }
+};
+
 const validateMessageEvent = (event: GenericMessageEvent): string | null => {
   const { text, subtype } = event;
 
@@ -146,53 +193,6 @@ const sendSlackResponse = async (
     text: summary,
     thread_ts,
   });
-};
-
-export const directMessageCallback = async ({
-  say,
-  logger,
-  event,
-  client,
-}: AllMiddlewareArgs &
-  SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
-  const { channel, thread_ts } = event;
-
-  try {
-    const text = validateMessageEvent(event);
-    if (!text) {
-      return;
-    }
-
-    // immediately update the thread status, don't await and block the thread
-    updateAgentStatus({
-      channel,
-      thread_ts,
-      status: "is thinking...",
-    });
-
-    let v0Chat: ChatDetail;
-
-    const { exists, chatId } = await doesChatExist(thread_ts);
-
-    if (exists && chatId) {
-      v0Chat = await sendToExistingChat(chatId, text);
-    } else {
-      v0Chat = await createNewChat(text, client, channel, thread_ts);
-    }
-
-    const summary = formatResponse(v0Chat);
-    const webUrl = v0Chat.webUrl || `https://v0.dev/chat/${v0Chat.id}`;
-    const demoUrl = v0Chat.latestVersion?.demoUrl || "";
-
-    await sendSlackResponse(say, summary, thread_ts, webUrl, demoUrl);
-  } catch (error) {
-    logger.error("Direct message handler failed:", error);
-
-    await say({
-      text: DEFAULT_ERROR_MESSAGE,
-      thread_ts,
-    });
-  }
 };
 
 const doesChatExist = async (
