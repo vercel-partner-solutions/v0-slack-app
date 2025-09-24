@@ -2,7 +2,7 @@ import { app } from "~/app";
 
 export const redis = useStorage("redis");
 
-export const getExistingChat = async (
+export const getChatIDFromThread = async (
   thread_ts: string,
 ): Promise<string | undefined> => {
   const chatKey = `chat:${thread_ts}`;

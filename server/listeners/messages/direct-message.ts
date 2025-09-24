@@ -7,7 +7,7 @@ import type { GenericMessageEvent, WebClient } from "@slack/web-api";
 import { generateText } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
-import { getExistingChat, setExistingChat } from "~/lib/redis";
+import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import { updateAgentStatus } from "~/lib/slack/utils";
 import { cleanV0Stream } from "~/lib/v0/utils";
 
@@ -29,7 +29,7 @@ export const directMessageCallback = async ({
   const { channel, thread_ts } = event;
 
   try {
-    const text = validateMessageEvent(event);
+    const text = validateDirectMessageEvent(event);
     if (!text) {
       return;
     }
@@ -41,21 +41,26 @@ export const directMessageCallback = async ({
       status: "is thinking...",
     }).catch((error) => logger.warn("Failed to update agent status:", error));
 
-    let v0Chat: ChatDetail;
+    let chat: ChatDetail;
 
-    const chatId = await getExistingChat(thread_ts);
+    const chatId = await getChatIDFromThread(thread_ts);
 
     if (chatId) {
-      v0Chat = await sendToExistingChat(chatId, text);
+      chat = await sendDirectMessageToExistingChat(chatId, text);
     } else {
-      v0Chat = await createNewChat(text, client, channel, thread_ts);
+      chat = await createNewChatFromDirectMessage(
+        text,
+        client,
+        channel,
+        thread_ts,
+      );
     }
 
-    const summary = cleanV0Stream(v0Chat.text);
-    const webUrl = v0Chat.webUrl || `https://v0.dev/chat/${v0Chat.id}`;
-    const demoUrl = v0Chat.latestVersion?.demoUrl;
+    const cleanedChat = cleanV0Stream(chat.text);
+    const webUrl = chat.webUrl || `https://v0.dev/chat/${chat.id}`;
+    const demoUrl = chat.latestVersion?.demoUrl;
 
-    await sendSlackResponse(say, summary, thread_ts, webUrl, demoUrl);
+    await sendChatResponseToSlack(say, cleanedChat, thread_ts, webUrl, demoUrl);
   } catch (error) {
     logger.error("Direct message handler failed:", error);
 
@@ -63,10 +68,19 @@ export const directMessageCallback = async ({
       text: DEFAULT_ERROR_MESSAGE,
       thread_ts,
     });
+  } finally {
+    // this will clear the status
+    updateAgentStatus({
+      channel,
+      thread_ts,
+      status: "",
+    });
   }
 };
 
-const validateMessageEvent = (event: GenericMessageEvent): string | null => {
+const validateDirectMessageEvent = (
+  event: GenericMessageEvent,
+): string | null => {
   const { text, subtype } = event;
 
   if (subtype === "message_changed") {
@@ -85,7 +99,9 @@ const validateMessageEvent = (event: GenericMessageEvent): string | null => {
   return text;
 };
 
-const generateChatTitle = async (messageText: string): Promise<string> => {
+const generateDirectMessageTitle = async (
+  messageText: string,
+): Promise<string> => {
   const { text: title } = await generateText({
     model: DEFAULT_MODEL,
     system: `
@@ -98,38 +114,38 @@ const generateChatTitle = async (messageText: string): Promise<string> => {
   return `${TITLE_PREFIX} ${title}`;
 };
 
-const createNewChat = async (
+const createNewChatFromDirectMessage = async (
   text: string,
   client: WebClient,
   channel: string,
   thread_ts: string,
 ): Promise<ChatDetail> => {
-  const titleWithPrefix = await generateChatTitle(text);
+  const title = await generateDirectMessageTitle(text);
 
   const [projectId] = await Promise.all([
     v0.projects.create({
-      name: titleWithPrefix,
+      name: title,
       instructions: PROJECT_INSTRUCTIONS,
     }),
     client.assistant.threads.setTitle({
       channel_id: channel,
       thread_ts,
-      title: titleWithPrefix,
+      title: title,
     }),
   ]);
 
-  const v0Chat = (await v0.chats.create({
+  const chat = (await v0.chats.create({
     message: text,
     projectId: projectId.id,
     responseMode: "sync",
   })) as ChatDetail;
 
-  setExistingChat(thread_ts, v0Chat.id);
+  await setExistingChat(thread_ts, chat.id);
 
-  return v0Chat;
+  return chat;
 };
 
-const sendToExistingChat = async (
+const sendDirectMessageToExistingChat = async (
   chatId: string,
   text: string,
 ): Promise<ChatDetail> => {
@@ -140,9 +156,9 @@ const sendToExistingChat = async (
   })) as ChatDetail;
 };
 
-const sendSlackResponse = async (
+const sendChatResponseToSlack = async (
   say: SayFn,
-  summary: string,
+  cleanedChat: string,
   thread_ts: string,
   webUrl?: string,
   demoUrl?: string,
@@ -178,7 +194,7 @@ const sendSlackResponse = async (
         type: "section",
         text: {
           type: "mrkdwn",
-          text: summary,
+          text: cleanedChat,
         },
       },
       {
@@ -186,7 +202,7 @@ const sendSlackResponse = async (
         elements: actions,
       },
     ],
-    text: summary,
+    text: cleanedChat,
     thread_ts,
   });
 };

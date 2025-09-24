@@ -2,7 +2,7 @@ import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import { generateObject, type ModelMessage } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { z } from "zod";
-import { getExistingChat, setExistingChat } from "~/lib/redis";
+import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import {
   getThreadContextAsModelMessage,
   MessageState,
@@ -62,7 +62,7 @@ const appMentionCallback = async ({
       }),
     });
 
-    const existingChatId = await getExistingChat(thread_ts);
+    const existingChatId = await getChatIDFromThread(thread_ts);
 
     let demoUrl = null;
     let v0Chat: ChatDetail;
