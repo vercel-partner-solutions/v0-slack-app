@@ -64,6 +64,7 @@ export const appMentionCallback = async ({
         },
       ],
       text: summary,
+      channel,
       thread_ts: thread_ts || ts,
     });
 
