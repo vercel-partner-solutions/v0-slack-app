@@ -1,12 +1,9 @@
-import type {
-  AllMiddlewareArgs,
-  EnvelopedEvent,
-  SlackEventMiddlewareArgs,
-} from "@slack/bolt";
-import type { AppHomeOpenedEvent, HomeView } from "@slack/web-api";
+import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
+import type { HomeView } from "@slack/web-api";
 import { Vercel } from "@vercel/sdk";
 import { app } from "~/app";
-import { deleteSession, getSession, type Session } from "~/lib/auth/session";
+import { deleteSession, type Session } from "~/lib/auth/session";
+import { updateAppHomeView } from "~/lib/slack/utils";
 
 const appHomeOpenedCallback = async ({
   client,
@@ -18,12 +15,10 @@ const appHomeOpenedCallback = async ({
   // Ignore the `app_home_opened` event for anything but the Home tab
   if (event.tab !== "home") return;
 
-  const session = await getSession(context.teamId, context.userId);
-
   try {
-    await client.views.publish({
-      user_id: event.user,
-      view: session ? await SignedInView(session, body) : SignedOutView(body),
+    await updateAppHomeView({
+      userId: context.userId,
+      teamId: context.teamId,
     });
   } catch (error) {
     logger.error("app_home_opened handler failed:", error);
@@ -32,9 +27,9 @@ const appHomeOpenedCallback = async ({
 
 export default appHomeOpenedCallback;
 
-const SignedInView = async (
+export const SignedInView = async (
   session: Session,
-  body: EnvelopedEvent<AppHomeOpenedEvent>,
+  body: { event: { user: string }; team_id: string },
 ): Promise<HomeView> => {
   const vercel = new Vercel({
     bearerToken: session?.token,
@@ -109,6 +104,22 @@ const SignedInView = async (
             })),
           },
         },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: " ",
+          },
+          accessory: {
+            type: "button",
+            text: {
+              type: "plain_text",
+              text: "Sign Out",
+            },
+            action_id: "sign-out-action",
+            value: "sign-out",
+          },
+        },
       ],
     };
   } catch (error) {
@@ -118,7 +129,10 @@ const SignedInView = async (
   }
 };
 
-const SignedOutView = (body: EnvelopedEvent<AppHomeOpenedEvent>): HomeView => {
+export const SignedOutView = (body: {
+  event: { user: string };
+  team_id: string;
+}): HomeView => {
   return {
     type: "home",
     blocks: [
@@ -136,7 +150,7 @@ const SignedOutView = (body: EnvelopedEvent<AppHomeOpenedEvent>): HomeView => {
           },
           action_id: "sign-in-action",
           value: "sign-in",
-          url: `http://localhost:3000/sign-in?slack_user_id=${body.event.user}&team_id=${body.team_id}&app_id=${body.api_app_id}`,
+          url: `http://localhost:3000/sign-in?slack_user_id=${body.event.user}&team_id=${body.team_id}`,
         },
       },
     ],

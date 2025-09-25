@@ -17,9 +17,8 @@ export default defineEventHandler(async (event): Promise<void> => {
   const query = getQuery(event);
   const slackUserId = query.slack_user_id as string;
   const slackTeamId = query.team_id as string;
-  const slackAppId = query.app_id as string;
 
-  if (!slackUserId || !slackTeamId || !slackAppId) {
+  if (!slackUserId || !slackTeamId) {
     return sendError(
       event,
       createError({
@@ -35,10 +34,9 @@ export default defineEventHandler(async (event): Promise<void> => {
     app.logger.info("User already signed in, redirecting to Slack home", {
       slackUserId,
       slackTeamId,
-      slackAppId,
       session,
     });
-    return redirectToSlackHome(event, slackTeamId, slackAppId);
+    return redirectToSlackHome(event, slackTeamId);
   }
 
   const eventUrl = getRequestURL(event);
