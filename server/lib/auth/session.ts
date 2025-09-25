@@ -5,6 +5,8 @@ export interface Session {
   token: string;
   createdAt: number;
   expiresAt?: number;
+  selectedTeamId?: string;
+  selectedTeamName?: string;
 }
 
 const SESSION_PREFIX = "session:";
