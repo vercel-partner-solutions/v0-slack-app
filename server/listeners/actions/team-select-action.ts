@@ -56,12 +56,6 @@ export const teamSelectActionCallback = async ({
     };
 
     await redis.set(`session:${slackUserId}`, updatedSession);
-
-    logger.info("Successfully updated user session with selected team", {
-      slackUserId,
-      selectedTeamId: selectedTeam.id,
-      selectedTeamName: selectedTeam.name,
-    });
   } catch (error) {
     logger.error("Team select action callback failed:", error);
   }
