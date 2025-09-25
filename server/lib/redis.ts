@@ -9,6 +9,12 @@ export const getChatIDFromThread = async (
   try {
     const existingChatId = await redis.get(chatKey);
 
+    // If key doesn't exist, return undefined
+    if (existingChatId === null || existingChatId === undefined) {
+      return undefined;
+    }
+
+    // If key exists but isn't a string, that's an error
     if (typeof existingChatId !== "string") {
       throw new Error("Existing chat ID is not a string");
     }

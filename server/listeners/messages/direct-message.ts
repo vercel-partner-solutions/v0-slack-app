@@ -8,7 +8,7 @@ import type {
   GenericMessageEvent,
   WebClient,
 } from "@slack/web-api";
-import { generateText } from "ai";
+import { generateObject, generateText } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
@@ -177,7 +177,7 @@ const sendChatResponseToSlack = async (
         text: "Open in v0",
       },
       url: webUrl,
-      action_id: "open_in_v0",
+      action_id: "open_in_v0_action",
       value: webUrl,
     });
   }
@@ -189,7 +189,7 @@ const sendChatResponseToSlack = async (
         text: "View demo",
       },
       url: demoUrl,
-      action_id: "view_demo",
+      action_id: "view_demo_action",
       value: demoUrl,
     });
   }

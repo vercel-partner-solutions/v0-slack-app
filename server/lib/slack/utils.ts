@@ -238,3 +238,31 @@ export const MessageState = {
     });
   },
 };
+
+export const isV0ChatUrl = (url: URL | string): boolean => {
+  // Convert URL object to string
+  const urlString = url instanceof URL ? url.toString() : url;
+
+  // Validate that this is a v0.app chat URL - allows additional paths and query params
+  // biome-ignore lint/complexity/noUselessEscapeInRegex: <I think it's wrong>
+  const v0ChatUrlRegex = /^https:\/\/v0\.app\/chat\/[^\/]+-[a-zA-Z0-9]+/;
+  return v0ChatUrlRegex.test(urlString);
+};
+
+export const tryGetChatIdFromV0Url = (
+  url: URL | string,
+): string | undefined => {
+  // Convert URL object to string
+  const urlString = url instanceof URL ? url.toString() : url;
+
+  // First validate the URL format
+  if (!isV0ChatUrl(urlString)) {
+    return undefined;
+  }
+
+  // Extract the chat ID using a more specific regex - allows additional paths and query params
+  const v0ChatIdRegex = /^https:\/\/v0\.app\/chat\/[^/]+-([a-zA-Z0-9]+)/;
+  const match = urlString.match(v0ChatIdRegex);
+
+  return match?.[1];
+};

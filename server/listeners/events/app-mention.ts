@@ -1,16 +1,17 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
-import { generateObject, type ModelMessage } from "ai";
+import { generateText, type ModelMessage } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
-import { z } from "zod";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import {
   getThreadContextAsModelMessage,
+  isV0ChatUrl,
   MessageState,
+  tryGetChatIdFromV0Url,
   updateAgentStatus,
 } from "~/lib/slack/utils";
 import { cleanV0Stream } from "~/lib/v0/utils";
 
-const appMentionCallback = async ({
+export const appMentionCallback = async ({
   event,
   say,
   logger,
@@ -19,81 +20,26 @@ const appMentionCallback = async ({
   const { channel, thread_ts, ts } = event;
 
   try {
-    await MessageState.setProcessing({
-      channel,
-      timestamp: ts,
-    });
-
-    let messages: ModelMessage[] = [];
-
-    if (thread_ts) {
-      updateAgentStatus({
+    const [, messages] = await Promise.all([
+      MessageState.setProcessing({
         channel,
-        thread_ts,
-        status: "is thinking...",
-      });
-      messages = await getThreadContextAsModelMessage({
-        channel,
-        ts: thread_ts,
-        botId: context.botId,
-      });
-    } else {
-      messages = [
-        {
-          role: "user",
-          content: event.text,
-        },
-      ];
-    }
-
-    const { object } = await generateObject({
-      model: "openai/gpt-4o-mini",
-      system: `
-      Take these messages and generate a prompt and title that will be given to v0, a generative UI tool.
-      `,
-      messages,
-      schema: z.object({
-        prompt: z.string().describe("The prompt for the v0 chat"),
-        title: z
-          .string()
-          .describe("The title of the v0 project")
-          .min(20)
-          .max(29),
+        timestamp: ts,
       }),
-    });
+      getMessagesFromEvent({
+        thread_ts,
+        channel,
+        botId: context.botId,
+        text: event.text,
+      }),
+    ]);
 
-    const existingChatId = await getChatIDFromThread(thread_ts);
+    const prompt = await getPromptFromMessages(messages);
 
-    let demoUrl = null;
-    let v0Chat: ChatDetail;
+    const chatId = await resolveChatId(messages, thread_ts);
 
-    if (existingChatId) {
-      v0Chat = (await v0.chats.sendMessage({
-        chatId: existingChatId,
-        message: object.prompt,
-        responseMode: "sync",
-      })) as ChatDetail;
-    } else {
-      const projectId = await v0.projects.create({
-        name: `🤖 ${object.title}`,
-        instructions:
-          "Do not use integrations in this project. Always skip the integrations step.",
-      });
-      v0Chat = (await v0.chats.create({
-        message: object.prompt,
-        projectId: projectId.id,
-        responseMode: "sync",
-      })) as ChatDetail;
+    const v0Chat = await processV0Message(chatId, prompt, messages, thread_ts);
 
-      await setExistingChat(thread_ts, v0Chat.id);
-    }
-
-    let summary = cleanV0Stream(v0Chat.text);
-    demoUrl = v0Chat.latestVersion?.demoUrl;
-
-    if (demoUrl) {
-      summary += `\n\n<${demoUrl}|View demo>`;
-    }
+    const summary = formatV0Response(v0Chat);
 
     await say({
       blocks: [
@@ -106,7 +52,6 @@ const appMentionCallback = async ({
       thread_ts,
     });
 
-    // Set completed state
     await MessageState.setCompleted({
       channel,
       timestamp: ts,
@@ -123,12 +68,172 @@ const appMentionCallback = async ({
     } catch (reactionError) {
       logger.warn("Failed to set error reaction:", reactionError);
     }
-
-    await say({
-      text: "Sorry, something went wrong processing your message. Please try again.",
-      thread_ts: event.thread_ts || event.ts,
+  } finally {
+    await updateAgentStatus({
+      channel,
+      thread_ts,
+      status: "",
     });
   }
 };
 
-export default appMentionCallback;
+const generateTitleFromMessages = async (messages: ModelMessage[]) => {
+  const { text: title } = await generateText({
+    model: "openai/gpt-4o-mini",
+    messages,
+    system:
+      "Generate a short, concise title for the v0 project in 30 characters or less.",
+  });
+  return title;
+};
+
+const getPromptFromMessages = async (messages: ModelMessage[]) => {
+  if (messages.length === 1 && typeof messages[0].content === "string") {
+    // Single message - use it directly as the prompt
+    return messages[0].content;
+  } else {
+    // Multiple messages - generate a summarized prompt
+    return await generatePromptFromMessages(messages);
+  }
+};
+
+const generatePromptFromMessages = async (messages: ModelMessage[]) => {
+  const { text: prompt } = await generateText({
+    model: "openai/gpt-4o-mini",
+    messages,
+    system:
+      "Summarize the thread messages into a prompt for a software engineer.",
+  });
+  return prompt;
+};
+
+const getMessagesFromEvent = async ({
+  thread_ts,
+  channel,
+  botId,
+  text,
+}: {
+  thread_ts: string;
+  channel: string;
+  botId: string;
+  text: string;
+}) => {
+  let messages: ModelMessage[] = [];
+  if (thread_ts) {
+    updateAgentStatus({
+      channel,
+      thread_ts,
+      status: "is reading thread...",
+    });
+    messages = await getThreadContextAsModelMessage({
+      channel,
+      ts: thread_ts,
+      botId,
+    });
+  } else {
+    messages = [
+      {
+        role: "user",
+        content: text,
+      },
+    ];
+  }
+  return messages;
+};
+
+const getChatIdFromMessages = (messages: ModelMessage[]) => {
+  let chatId: string | undefined;
+  for (const message of messages) {
+    if (typeof message.content === "string") {
+      const urlRegex = /https?:\/\/[^\s]+/g;
+      const urls = message.content.match(urlRegex) || [];
+
+      for (const url of urls) {
+        if (isV0ChatUrl(url)) {
+          const chatIdFromUrl = tryGetChatIdFromV0Url(url);
+          if (chatIdFromUrl) {
+            chatId = chatIdFromUrl;
+            break;
+          }
+        }
+      }
+      if (chatId) break;
+    }
+  }
+  return chatId;
+};
+
+const sendMessageToExistingChat = async (chatId: string, prompt: string) => {
+  const v0Chat = await v0.chats.sendMessage({
+    chatId,
+    message: prompt,
+    responseMode: "sync",
+  });
+  return v0Chat as ChatDetail;
+};
+
+const resolveChatId = async (
+  messages: ModelMessage[],
+  thread_ts: string,
+): Promise<string | undefined> => {
+  // First priority: chat ID from v0 URLs in messages
+  const chatIdFromMessages = getChatIdFromMessages(messages);
+  if (chatIdFromMessages) {
+    return chatIdFromMessages;
+  }
+
+  // Second priority: existing chat ID from thread
+  return await getChatIDFromThread(thread_ts);
+};
+
+const processV0Message = async (
+  chatId: string | undefined,
+  prompt: string,
+  messages: ModelMessage[],
+  thread_ts: string,
+): Promise<ChatDetail> => {
+  if (chatId) {
+    const v0Chat = await sendMessageToExistingChat(chatId, prompt);
+
+    // If we found a chat ID from messages, link the thread
+    const chatIdFromMessages = getChatIdFromMessages(messages);
+    if (chatIdFromMessages && chatIdFromMessages !== chatId) {
+      await setExistingChat(thread_ts, chatIdFromMessages);
+    }
+
+    return v0Chat;
+  } else {
+    const v0Chat = await sendMessageToNewChat(prompt, messages);
+    await setExistingChat(thread_ts, v0Chat.id);
+    return v0Chat;
+  }
+};
+
+const formatV0Response = (v0Chat: ChatDetail): string => {
+  let summary = cleanV0Stream(v0Chat.text);
+  const demoUrl = v0Chat.latestVersion?.demoUrl;
+
+  if (demoUrl) {
+    summary += `\n\n<${demoUrl}|View demo>`;
+  }
+
+  return summary;
+};
+
+const sendMessageToNewChat = async (
+  prompt: string,
+  messages: ModelMessage[],
+) => {
+  const title = await generateTitleFromMessages(messages);
+  const projectId = await v0.projects.create({
+    name: `🤖 ${title}`,
+    instructions:
+      "Do not use integrations in this project. Always skip the integrations step.",
+  });
+  const v0Chat = await v0.chats.create({
+    message: prompt,
+    projectId: projectId.id,
+    responseMode: "sync",
+  });
+  return v0Chat as ChatDetail;
+};
