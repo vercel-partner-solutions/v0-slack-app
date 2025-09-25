@@ -7,7 +7,7 @@ export const updateChatTitleTool = tool({
   name: "update_chat_title",
   description: "Update the title of the chat",
   inputSchema: z.object({
-    title: z.string().describe("The new title of the chat"),
+    title: z.string().describe("The new title of the chat").min(20).max(29),
   }),
   execute: ({ title }, { experimental_context }) => {
     try {

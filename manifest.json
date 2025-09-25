@@ -52,7 +52,7 @@
   },
   "settings": {
     "event_subscriptions": {
-      "request_url": "https://your-app-domain/api/slack/events",
+      "request_url": "https://flavourful-irena-undappled.ngrok-free.dev/api/slack/events",
       "bot_events": [
         "app_home_opened",
         "app_mention",
@@ -66,7 +66,7 @@
     },
     "interactivity": {
       "is_enabled": true,
-      "request_url": "https://your-app-domain/api/slack/events"
+      "request_url": "https://flavourful-irena-undappled.ngrok-free.dev/api/slack/events"
     },
     "org_deploy_enabled": true,
     "socket_mode_enabled": false,
