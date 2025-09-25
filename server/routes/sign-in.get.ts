@@ -12,7 +12,7 @@ import { redirectToSlackHome } from "~/lib/slack/utils";
 const VERCEL_CLIENT_ID = process.env.VERCEL_CLIENT_ID;
 const VERCEL_CLIENT_SECRET = process.env.VERCEL_CLIENT_SECRET;
 const COOKIE_MAX_AGE = 60 * 10; // 10 minutes
-const SCOPES = ["openid"];
+const SCOPES = ["openid", "email", "profile", "offline_access"];
 
 export default defineEventHandler(async (event): Promise<void> => {
   const query = getQuery(event);

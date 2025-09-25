@@ -17,6 +17,7 @@
   "dependencies": {
     "@slack/bolt": "^4.4.0",
     "@slack/web-api": "^7.10.0",
+    "@vercel/sdk": "^1.11.4",
     "@vercel/slack-bolt": "1.0.2",
     "ai": "latest",
     "v0-sdk": "^0.12.0",
