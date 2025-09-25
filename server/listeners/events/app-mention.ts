@@ -19,7 +19,15 @@ export const appMentionCallback = async ({
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   const { channel, thread_ts, ts } = event;
 
-  // fire and forget status update
+  if (thread_ts) {
+    await updateAgentStatus({
+      channel,
+      thread_ts,
+      status: "is thinking...",
+    });
+  }
+
+  // fire and forget emoji update
   MessageState.setProcessing({
     channel,
     timestamp: ts,
@@ -108,11 +116,6 @@ const getAppMentionContext = async (
   const { channel, thread_ts, bot_id, text } = event;
   let messages: ModelMessage[] = [];
   if (thread_ts) {
-    updateAgentStatus({
-      channel,
-      thread_ts,
-      status: "is reading thread...",
-    });
     messages = await getThreadMessagesAsModelMessages({
       channel,
       ts: thread_ts,
