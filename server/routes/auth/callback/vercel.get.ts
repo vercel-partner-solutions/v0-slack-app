@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
   const storedVerifier = getCookie(event, "vercel_oauth_code_verifier") ?? null;
   const storedRedirectTo = getCookie(event, "vercel_oauth_redirect_to") ?? null;
   const storedSlackUserId = getCookie(event, "slack_user_id") ?? null;
+  const storedSlackTeamId = getCookie(event, "slack_team_id") ?? null;
 
   if (
     !isValidOAuthCallbackParams(
@@ -24,6 +25,8 @@ export default defineEventHandler(async (event) => {
       storedState,
       storedRedirectTo,
       storedVerifier,
+      storedSlackUserId,
+      storedSlackTeamId,
     )
   ) {
     return new Response("Invalid OAuth callback parameters", { status: 400 });
@@ -53,6 +56,7 @@ export default defineEventHandler(async (event) => {
   try {
     await createSession({
       slackUserId: storedSlackUserId,
+      slackTeamId: storedSlackTeamId,
       token: tokens.accessToken(),
       refreshToken: tokens.refreshToken(),
       expiresIn: tokens.accessTokenExpiresAt().getTime(),
@@ -67,6 +71,7 @@ export default defineEventHandler(async (event) => {
   deleteCookie(event, "vercel_oauth_code_verifier");
   deleteCookie(event, "vercel_oauth_redirect_to");
   deleteCookie(event, "slack_user_id");
+  deleteCookie(event, "slack_team_id");
 
   return sendRedirect(event, "slack://open", 302);
 });
@@ -77,13 +82,17 @@ const isValidOAuthCallbackParams = (
   storedState: string | null,
   storedRedirectTo: string | null,
   storedVerifier: string | null,
+  storedSlackUserId: string | null,
+  storedSlackTeamId: string | null,
 ): boolean => {
   return (
     code !== null &&
     state !== null &&
     storedState === state &&
     storedRedirectTo !== null &&
-    storedVerifier !== null
+    storedVerifier !== null &&
+    storedSlackUserId !== null &&
+    storedSlackTeamId !== null
   );
 };
 

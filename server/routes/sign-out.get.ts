@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     return redirectToSlackHome(event, slackTeamId, slackAppId);
   }
 
-  const session = await getSession(slackUserId);
+  const session = await getSession(slackTeamId, slackUserId);
 
   if (session?.token) {
     const clientId = process.env.VERCEL_CLIENT_ID ?? "";
@@ -32,12 +32,13 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  await deleteSession(slackUserId);
+  await deleteSession(slackTeamId, slackUserId);
 
   deleteCookie(event, "vercel_oauth_state");
   deleteCookie(event, "vercel_oauth_code_verifier");
   deleteCookie(event, "vercel_oauth_redirect_to");
   deleteCookie(event, "slack_user_id");
+  deleteCookie(event, "slack_team_id");
 
   return redirectToSlackHome(event, slackTeamId, slackAppId);
 });

@@ -5,6 +5,7 @@ import { SCOPES, TOKEN_PATH } from "./constants";
 
 export interface Session {
   slackUserId: string;
+  slackTeamId: string;
   token: string;
   refreshToken?: string;
   createdAt: number;
@@ -18,6 +19,7 @@ const DEFAULT_TTL_HOURS = 24 * 7; // 7 days
 
 type CreateSessionParams = {
   slackUserId: string;
+  slackTeamId: string;
   token: string;
   refreshToken?: string;
   expiresIn?: number;
@@ -25,6 +27,7 @@ type CreateSessionParams = {
 
 export async function createSession({
   slackUserId,
+  slackTeamId,
   token,
   refreshToken,
   expiresIn,
@@ -32,6 +35,7 @@ export async function createSession({
   const now = Date.now();
   const session: Session = {
     slackUserId,
+    slackTeamId,
     token,
     refreshToken,
     createdAt: now,
@@ -40,13 +44,18 @@ export async function createSession({
       : now + DEFAULT_TTL_HOURS * 60 * 60 * 1000,
   };
 
-  await redis.set(`${SESSION_PREFIX}${slackUserId}`, session);
+  await redis.set(`${SESSION_PREFIX}${slackTeamId}:${slackUserId}`, session);
 
   return session;
 }
 
-export async function getSession(slackUserId: string): Promise<Session | null> {
-  const session = await redis.get<Session>(`${SESSION_PREFIX}${slackUserId}`);
+export async function getSession(
+  slackTeamId: string,
+  slackUserId: string,
+): Promise<Session | null> {
+  const session = await redis.get<Session>(
+    `${SESSION_PREFIX}${slackTeamId}:${slackUserId}`,
+  );
 
   if (!session) return null;
 
@@ -62,20 +71,26 @@ export async function getSession(slackUserId: string): Promise<Session | null> {
           expiresAt: refreshedTokens.expiresAt,
         };
 
-        await redis.set(`${SESSION_PREFIX}${slackUserId}`, updatedSession);
+        await redis.set(
+          `${SESSION_PREFIX}${slackTeamId}:${slackUserId}`,
+          updatedSession,
+        );
         return updatedSession;
       }
     }
 
-    await deleteSession(slackUserId);
+    await deleteSession(slackTeamId, slackUserId);
     return null;
   }
 
   return session;
 }
 
-export async function deleteSession(slackUserId: string): Promise<void> {
-  await redis.del(`${SESSION_PREFIX}${slackUserId}`);
+export async function deleteSession(
+  slackTeamId: string,
+  slackUserId: string,
+): Promise<void> {
+  await redis.del(`${SESSION_PREFIX}${slackTeamId}:${slackUserId}`);
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<{
