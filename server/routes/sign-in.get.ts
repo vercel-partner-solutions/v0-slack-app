@@ -19,17 +19,17 @@ export default defineEventHandler(async (event): Promise<void> => {
   const slackTeamId = query.team_id as string;
   const slackAppId = query.app_id as string;
 
-  if (!slackUserId) {
+  if (!slackUserId || !slackTeamId || !slackAppId) {
     return sendError(
       event,
       createError({
         statusCode: 400,
-        statusMessage: "Slack user ID is required",
+        statusMessage: "Slack user ID, team ID, and app ID are required",
       }),
     );
   }
 
-  const session = await getSession(slackUserId);
+  const session = await getSession(slackTeamId, slackUserId);
 
   if (session) {
     app.logger.info("User already signed in, redirecting to Slack home", {
@@ -87,6 +87,7 @@ export default defineEventHandler(async (event): Promise<void> => {
   setCookie(event, "vercel_oauth_state", state, cookieOptions);
   setCookie(event, "vercel_oauth_code_verifier", verifier, cookieOptions);
   setCookie(event, "slack_user_id", slackUserId, cookieOptions);
+  setCookie(event, "slack_team_id", slackTeamId, cookieOptions);
 
   return sendRedirect(event, url.toString(), 302);
 });

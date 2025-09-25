@@ -11,12 +11,22 @@ export const teamSelectActionCallback = async ({
   ack,
   logger,
   body,
+  context,
 }: AllMiddlewareArgs & SlackActionMiddlewareArgs<BlockAction>) => {
   try {
     await ack();
 
-    const slackUserId = body.user.id;
-    const session = await getSession(slackUserId);
+    const slackTeamId = context?.teamId;
+    if (!slackTeamId) {
+      logger.error("Team select action failed: no team ID found");
+      return;
+    }
+    const slackUserId = body?.user?.id;
+    if (!slackUserId) {
+      logger.error("Team select action failed: no user ID found");
+      return;
+    }
+    const session = await getSession(slackTeamId, slackUserId);
 
     if (!session) {
       logger.error("Team select action failed: no session found for user", {
@@ -55,7 +65,7 @@ export const teamSelectActionCallback = async ({
       selectedTeamName: selectedTeam.name,
     };
 
-    await redis.set(`session:${slackUserId}`, updatedSession);
+    await redis.set(`session:${slackTeamId}:${slackUserId}`, updatedSession);
   } catch (error) {
     logger.error("Team select action callback failed:", error);
   }

@@ -12,13 +12,13 @@ const appHomeOpenedCallback = async ({
   client,
   event,
   logger,
-  payload,
   body,
+  context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_home_opened">) => {
   // Ignore the `app_home_opened` event for anything but the Home tab
   if (event.tab !== "home") return;
 
-  const session = await getSession(payload.user);
+  const session = await getSession(context.teamId, context.userId);
 
   try {
     await client.views.publish({
@@ -55,11 +55,10 @@ const SignedInView = async (
       return SignedOutView(body);
     }
 
-    let selectedTeam = teams.find((team) => team.id === session.selectedTeamId);
+    const selectedTeam = teams.find(
+      (team) => team.id === session.selectedTeamId,
+    );
 
-    if (!selectedTeam) {
-      selectedTeam = teams[0];
-    }
     return {
       type: "home",
       blocks: [
@@ -90,13 +89,17 @@ const SignedInView = async (
               text: "Choose a team",
             },
             action_id: "team-select-action",
-            initial_option: {
-              text: {
-                type: "plain_text",
-                text: selectedTeam.name,
-              },
-              value: selectedTeam.id,
-            },
+            ...(selectedTeam
+              ? {
+                  initial_option: {
+                    text: {
+                      type: "plain_text",
+                      text: selectedTeam.name,
+                    },
+                    value: selectedTeam.id,
+                  },
+                }
+              : {}),
             options: teams.map((team) => ({
               text: {
                 type: "plain_text",
@@ -109,7 +112,7 @@ const SignedInView = async (
       ],
     };
   } catch (error) {
-    await deleteSession(session.slackUserId);
+    await deleteSession(session.slackTeamId, session.slackUserId);
     app.logger.error("SignedInView failed:", error);
     return SignedOutView(body);
   }
