@@ -50,7 +50,8 @@ export const appMentionCallback = async ({
         },
       ],
       text: summary,
-      thread_ts,
+      channel,
+      thread_ts: thread_ts || ts,
     });
 
     await MessageState.setCompleted({
