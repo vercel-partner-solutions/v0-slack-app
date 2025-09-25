@@ -4,6 +4,7 @@ import {
   generateState,
   OAuth2Client,
 } from "arctic";
+import { app } from "~/app";
 import { AUTHORIZE_PATH, REDIRECT_PATH } from "~/lib/auth/constants";
 import { getSession } from "~/lib/auth/session";
 import { redirectToSlackHome } from "~/lib/slack/utils";
@@ -32,6 +33,12 @@ export default defineEventHandler(async (event): Promise<void> => {
   const session = await getSession(slackUserId);
 
   if (session) {
+    app.logger.info("User already signed in, redirecting to Slack home", {
+      slackUserId,
+      slackTeamId,
+      slackAppId,
+      session,
+    });
     return redirectToSlackHome(event, slackTeamId, slackAppId);
   }
 
