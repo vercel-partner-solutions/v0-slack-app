@@ -63,32 +63,45 @@ export const updateAgentStatus = async ({
 
 // Extend the ModelMessage type with Slack-specific metadata to identify multiple users in the same thread
 export type SlackUIMessage = ModelMessage & {
-  metadata?: MessageElement;
+  subtype?: string;
+  metadata?: MessageElement & {
+    event_type?: string;
+    event_payload?: {
+      chat_id?: string;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
 };
 
-const getThreadContext = async (args: ConversationsRepliesArguments) => {
+const getThreadMessages = async (
+  args: ConversationsRepliesArguments,
+): Promise<MessageElement[]> => {
   const thread = await app.client.conversations.replies(args);
 
-  return thread.messages || [];
+  return thread.messages;
 };
 
-export const getThreadContextAsModelMessage = async (
+export const getThreadMessagesAsModelMessages = async (
   args: ConversationsRepliesArguments & { botId: string },
 ): Promise<SlackUIMessage[]> => {
   const { botId } = args;
-  const messages = await getThreadContext(args);
+  const messages = await getThreadMessages(args);
 
   return messages.map((message) => {
-    const { bot_id, text, user, ts, thread_ts, type } = message;
+    const { bot_id, text, user, ts, thread_ts, type, subtype, metadata } =
+      message;
     return {
       role: bot_id === botId ? "assistant" : "user",
       content: text,
+      subtype,
       metadata: {
         user: user || null,
         bot_id: bot_id || null,
         ts,
         thread_ts,
         type,
+        ...metadata,
       },
     };
   });
@@ -225,4 +238,32 @@ export const MessageState = {
       name: "x",
     });
   },
+};
+
+export const isV0ChatUrl = (url: URL | string): boolean => {
+  // Convert URL object to string
+  const urlString = url instanceof URL ? url.toString() : url;
+
+  // Validate that this is a v0.app chat URL - allows additional paths and query params
+  // biome-ignore lint/complexity/noUselessEscapeInRegex: <I think it's wrong>
+  const v0ChatUrlRegex = /^https:\/\/v0\.app\/chat\/[^\/]+-[a-zA-Z0-9]+/;
+  return v0ChatUrlRegex.test(urlString);
+};
+
+export const tryGetChatIdFromV0Url = (
+  url: URL | string,
+): string | undefined => {
+  // Convert URL object to string
+  const urlString = url instanceof URL ? url.toString() : url;
+
+  // First validate the URL format
+  if (!isV0ChatUrl(urlString)) {
+    return undefined;
+  }
+
+  // Extract the chat ID using a more specific regex - allows additional paths and query params
+  const v0ChatIdRegex = /^https:\/\/v0\.app\/chat\/[^/]+-([a-zA-Z0-9]+)/;
+  const match = urlString.match(v0ChatIdRegex);
+
+  return match?.[1];
 };

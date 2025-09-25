@@ -1,7 +1,7 @@
-import { tool } from "ai";
+import { generateText, tool } from "ai";
 import { z } from "zod";
 import { app } from "~/app";
-import { getThreadContextAsModelMessage } from "~/lib/slack/utils";
+import { getThreadMessagesAsModelMessages } from "~/lib/slack/utils";
 import type { ExperimentalContext } from "../respond-to-message";
 
 export const getThreadMessagesTool = tool({
@@ -14,14 +14,21 @@ export const getThreadMessagesTool = tool({
       const { channel, thread_ts, botId } =
         experimental_context as ExperimentalContext;
 
-      return await getThreadContextAsModelMessage({
+      const messages = await getThreadMessagesAsModelMessages({
         channel,
         ts: thread_ts,
         botId,
       });
+
+      const messageThreadSummary = await generateText({
+        model: "openai/gpt-4o-mini",
+        messages,
+        system: "Summarize the thread messages in a concise way.",
+      });
+
+      return messageThreadSummary;
     } catch (error) {
       app.logger.error("Failed to get thread messages:", error);
-      return [];
     }
   },
 });

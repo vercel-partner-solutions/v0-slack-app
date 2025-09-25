@@ -15,11 +15,14 @@ importers:
         specifier: ^7.10.0
         version: 7.10.0
       '@vercel/slack-bolt':
-        specifier: latest
-        version: 1.0.1(@slack/bolt@4.4.0(@types/express@5.0.3))
+        specifier: 1.0.2
+        version: 1.0.2(@slack/bolt@4.4.0(@types/express@5.0.3))
       ai:
         specifier: latest
         version: 5.0.28(zod@4.1.5)
+      v0-sdk:
+        specifier: ^0.12.0
+        version: 0.12.0
       zod:
         specifier: ^4.0.17
         version: 4.1.5
@@ -1087,6 +1090,15 @@ packages:
       '@aws-sdk/credential-provider-web-identity':
         optional: true
 
+  '@vercel/functions@3.1.0':
+    resolution: {integrity: sha512-V+p8dO+sg1VjiJJUO5rYPp1KG17SzDcR74OWwW7Euyde6L8U5wuTMe9QfEOfLTiWPUPzN1MXZvLcYxqSYhKc4Q==}
+    engines: {node: '>= 20'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-web-identity': '*'
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-web-identity':
+        optional: true
+
   '@vercel/nft@0.29.4':
     resolution: {integrity: sha512-6lLqMNX3TuycBPABycx7A9F1bHQR7kiQln6abjFbPrf5C/05qHM9M5E4PeTE59c7z8g6vHnx1Ioihb2AQl7BTA==}
     engines: {node: '>=18'}
@@ -1096,8 +1108,12 @@ packages:
     resolution: {integrity: sha512-59PBFx3T+k5hLTEWa3ggiMpGRz1OVvl9eN8SUai+A43IsqiOuAe7qPBf+cray/Fj6mkgnxm/D7IAtjc8zSHi7g==}
     engines: {node: '>= 18'}
 
-  '@vercel/slack-bolt@1.0.1':
-    resolution: {integrity: sha512-9+iqmFYoaN9gUa/H30qsG+P7CGA43hAJE1w5Nrk3ewkJFciVvGlnsM25e8gpnjiWQ7NmaoZHbVP/QslMMlOhPg==}
+  '@vercel/oidc@3.0.0':
+    resolution: {integrity: sha512-XOoUcf/1VfGArUAfq0ELxk6TD7l4jGcrOsWjQibj4wYM74uNihzZ9gA46ywWegoqKWWdph4y5CKxGI9823deoA==}
+    engines: {node: '>= 20'}
+
+  '@vercel/slack-bolt@1.0.2':
+    resolution: {integrity: sha512-y5onITJK5lFchR1lIErn/JO80yYknvVDzERhtQEGfCCIFP/AjvlJKgfXaL0CDnoVobah9QR3e2XnV+KZGH4G4g==}
     peerDependencies:
       '@slack/bolt': ^4.4.0
 
@@ -3099,6 +3115,10 @@ packages:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
+  v0-sdk@0.12.0:
+    resolution: {integrity: sha512-1uLzoI+twlPr5F8LmQo3FKi1Wt/2SsgEneffV0E2S17xGSiGgsk8Ur4HtdSbyQSCcIuF2A7JJomkiPDnHIuVBQ==}
+    engines: {node: '>=22', pnpm: '>=9'}
+
   validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}
 
@@ -4091,6 +4111,11 @@ snapshots:
   '@vercel/functions@2.2.13':
     dependencies:
       '@vercel/oidc': 2.0.2
+    optional: true
+
+  '@vercel/functions@3.1.0':
+    dependencies:
+      '@vercel/oidc': 3.0.0
 
   '@vercel/nft@0.29.4(rollup@4.49.0)':
     dependencies:
@@ -4115,12 +4140,18 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
       ms: 2.1.3
+    optional: true
 
-  '@vercel/slack-bolt@1.0.1(@slack/bolt@4.4.0(@types/express@5.0.3))':
+  '@vercel/oidc@3.0.0':
+    dependencies:
+      '@types/ms': 2.1.0
+      ms: 2.1.3
+
+  '@vercel/slack-bolt@1.0.2(@slack/bolt@4.4.0(@types/express@5.0.3))':
     dependencies:
       '@slack/bolt': 4.4.0(@types/express@5.0.3)
       '@slack/logger': 4.0.0
-      '@vercel/functions': 2.2.13
+      '@vercel/functions': 3.1.0
     transitivePeerDependencies:
       - '@aws-sdk/credential-provider-web-identity'
 
@@ -6233,6 +6264,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid@11.1.0: {}
+
+  v0-sdk@0.12.0: {}
 
   validate-npm-package-license@3.0.4:
     dependencies:
