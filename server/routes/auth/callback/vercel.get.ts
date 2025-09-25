@@ -54,6 +54,7 @@ export default defineEventHandler(async (event) => {
     await createSession({
       slackUserId: storedSlackUserId,
       token: tokens.accessToken(),
+      refreshToken: tokens.refreshToken(),
       expiresIn: tokens.accessTokenExpiresAt().getTime(),
     });
   } catch (error) {
