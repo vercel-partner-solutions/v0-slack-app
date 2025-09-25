@@ -74,20 +74,21 @@ export type SlackUIMessage = ModelMessage & {
   };
 };
 
-const getThreadContext = async (args: ConversationsRepliesArguments) => {
+const getThreadMessages = async (
+  args: ConversationsRepliesArguments,
+): Promise<MessageElement[]> => {
   const thread = await app.client.conversations.replies(args);
 
-  return thread.messages || [];
+  return thread.messages;
 };
 
-export const getThreadContextAsModelMessage = async (
+export const getThreadMessagesAsModelMessages = async (
   args: ConversationsRepliesArguments & { botId: string },
 ): Promise<SlackUIMessage[]> => {
   const { botId } = args;
-  const messages = await getThreadContext(args);
+  const messages = await getThreadMessages(args);
 
   return messages.map((message) => {
-    // @ts-expect-error
     const { bot_id, text, user, ts, thread_ts, type, subtype, metadata } =
       message;
     return {

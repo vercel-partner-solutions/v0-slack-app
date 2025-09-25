@@ -1,9 +1,10 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
+import type { AppMentionEvent } from "@slack/types";
 import { generateText, type ModelMessage } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import {
-  getThreadContextAsModelMessage,
+  getThreadMessagesAsModelMessages,
   isV0ChatUrl,
   MessageState,
   tryGetChatIdFromV0Url,
@@ -15,30 +16,22 @@ export const appMentionCallback = async ({
   event,
   say,
   logger,
-  context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   const { channel, thread_ts, ts } = event;
 
+  // fire and forget status update
+  MessageState.setProcessing({
+    channel,
+    timestamp: ts,
+  }).catch((error) => logger.warn("Failed to set processing reaction:", error));
+
   try {
-    const [, messages] = await Promise.all([
-      MessageState.setProcessing({
-        channel,
-        timestamp: ts,
-      }),
-      getMessagesFromEvent({
-        thread_ts,
-        channel,
-        botId: context.botId,
-        text: event.text,
-      }),
+    const { messages } = await getAppMentionContext(event);
+    const [prompt, chatId] = await Promise.all([
+      getPromptFromMessages(messages),
+      resolveChatId(messages, thread_ts),
     ]);
-
-    const prompt = await getPromptFromMessages(messages);
-
-    const chatId = await resolveChatId(messages, thread_ts);
-
     const v0Chat = await processV0Message(chatId, prompt, messages, thread_ts);
-
     const summary = formatV0Response(v0Chat);
 
     await say({
@@ -59,21 +52,19 @@ export const appMentionCallback = async ({
   } catch (error) {
     logger.error("app_mention handler failed:", error);
 
-    // Try to mark message as failed, but don't let this prevent user notification
-    try {
-      await MessageState.setError({
-        channel,
-        timestamp: ts,
-      });
-    } catch (reactionError) {
-      logger.warn("Failed to set error reaction:", reactionError);
-    }
-  } finally {
-    await updateAgentStatus({
+    MessageState.setError({
       channel,
-      thread_ts,
-      status: "",
-    });
+      timestamp: ts,
+    }).catch((error) => logger.warn("Failed to set error reaction:", error));
+  } finally {
+    // clear agent status
+    if (thread_ts) {
+      await updateAgentStatus({
+        channel,
+        thread_ts,
+        status: "",
+      });
+    }
   }
 };
 
@@ -107,17 +98,14 @@ const generatePromptFromMessages = async (messages: ModelMessage[]) => {
   return prompt;
 };
 
-const getMessagesFromEvent = async ({
-  thread_ts,
-  channel,
-  botId,
-  text,
-}: {
-  thread_ts: string;
-  channel: string;
-  botId: string;
-  text: string;
-}) => {
+type AppMentionContext = {
+  messages: ModelMessage[];
+};
+
+const getAppMentionContext = async (
+  event: AppMentionEvent,
+): Promise<AppMentionContext> => {
+  const { channel, thread_ts, bot_id, text } = event;
   let messages: ModelMessage[] = [];
   if (thread_ts) {
     updateAgentStatus({
@@ -125,10 +113,10 @@ const getMessagesFromEvent = async ({
       thread_ts,
       status: "is reading thread...",
     });
-    messages = await getThreadContextAsModelMessage({
+    messages = await getThreadMessagesAsModelMessages({
       channel,
       ts: thread_ts,
-      botId,
+      botId: bot_id,
     });
   } else {
     messages = [
@@ -138,7 +126,7 @@ const getMessagesFromEvent = async ({
       },
     ];
   }
-  return messages;
+  return { messages };
 };
 
 const getChatIdFromMessages = (messages: ModelMessage[]) => {
@@ -174,7 +162,7 @@ const sendMessageToExistingChat = async (chatId: string, prompt: string) => {
 
 const resolveChatId = async (
   messages: ModelMessage[],
-  thread_ts: string,
+  thread_ts?: string,
 ): Promise<string | undefined> => {
   // First priority: chat ID from v0 URLs in messages
   const chatIdFromMessages = getChatIdFromMessages(messages);

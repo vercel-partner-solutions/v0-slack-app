@@ -1,7 +1,7 @@
 import { generateText, tool } from "ai";
 import { z } from "zod";
 import { app } from "~/app";
-import { getThreadContextAsModelMessage } from "~/lib/slack/utils";
+import { getThreadMessagesAsModelMessages } from "~/lib/slack/utils";
 import type { ExperimentalContext } from "../respond-to-message";
 
 export const getThreadMessagesTool = tool({
@@ -14,7 +14,7 @@ export const getThreadMessagesTool = tool({
       const { channel, thread_ts, botId } =
         experimental_context as ExperimentalContext;
 
-      const messages = await getThreadContextAsModelMessage({
+      const messages = await getThreadMessagesAsModelMessages({
         channel,
         ts: thread_ts,
         botId,
