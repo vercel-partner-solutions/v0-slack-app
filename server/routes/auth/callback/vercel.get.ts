@@ -51,11 +51,11 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    await createSession(
-      storedSlackUserId,
-      tokens.accessToken(),
-      tokens.accessTokenExpiresAt().getTime(),
-    );
+    await createSession({
+      slackUserId: storedSlackUserId,
+      token: tokens.accessToken(),
+      expiresIn: tokens.accessTokenExpiresAt().getTime(),
+    });
   } catch (error) {
     app.logger.error("Failed to create session:", error);
     return new Response(null, { status: 500 });

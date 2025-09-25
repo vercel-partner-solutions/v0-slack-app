@@ -1,3 +1,5 @@
+import { redis } from "../redis";
+
 export interface Session {
   slackUserId: string;
   token: string;
@@ -8,11 +10,17 @@ export interface Session {
 const SESSION_PREFIX = "session:";
 const DEFAULT_TTL_HOURS = 24 * 7; // 7 days
 
-export async function createSession(
-  slackUserId: string,
-  token: string,
-  expiresIn?: number,
-): Promise<Session> {
+type CreateSessionParams = {
+  slackUserId: string;
+  token: string;
+  expiresIn?: number;
+};
+
+export async function createSession({
+  slackUserId,
+  token,
+  expiresIn,
+}: CreateSessionParams): Promise<Session> {
   const now = Date.now();
   const session: Session = {
     slackUserId,
@@ -23,17 +31,13 @@ export async function createSession(
       : now + DEFAULT_TTL_HOURS * 60 * 60 * 1000,
   };
 
-  const storage = useStorage("redis");
-  await storage.setItem(`${SESSION_PREFIX}${slackUserId}`, session);
+  await redis.set(`${SESSION_PREFIX}${slackUserId}`, session);
 
   return session;
 }
 
 export async function getSession(slackUserId: string): Promise<Session | null> {
-  const storage = useStorage("redis");
-  const session = await storage.getItem<Session>(
-    `${SESSION_PREFIX}${slackUserId}`,
-  );
+  const session = await redis.get<Session>(`${SESSION_PREFIX}${slackUserId}`);
 
   if (!session) return null;
 
@@ -46,6 +50,5 @@ export async function getSession(slackUserId: string): Promise<Session | null> {
 }
 
 export async function deleteSession(slackUserId: string): Promise<void> {
-  const storage = useStorage("redis");
-  await storage.removeItem(`${SESSION_PREFIX}${slackUserId}`);
+  await redis.del(`${SESSION_PREFIX}${slackUserId}`);
 }
