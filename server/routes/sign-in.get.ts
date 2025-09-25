@@ -5,14 +5,13 @@ import {
   OAuth2Client,
 } from "arctic";
 import { app } from "~/app";
-import { AUTHORIZE_PATH, REDIRECT_PATH } from "~/lib/auth/constants";
+import { AUTHORIZE_PATH, REDIRECT_PATH, SCOPES } from "~/lib/auth/constants";
 import { getSession } from "~/lib/auth/session";
 import { redirectToSlackHome } from "~/lib/slack/utils";
 
 const VERCEL_CLIENT_ID = process.env.VERCEL_CLIENT_ID;
 const VERCEL_CLIENT_SECRET = process.env.VERCEL_CLIENT_SECRET;
 const COOKIE_MAX_AGE = 60 * 10; // 10 minutes
-const SCOPES = ["openid", "email", "profile", "offline_access"];
 
 export default defineEventHandler(async (event): Promise<void> => {
   const query = getQuery(event);
