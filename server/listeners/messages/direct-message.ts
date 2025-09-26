@@ -8,7 +8,7 @@ import type {
   GenericMessageEvent,
   WebClient,
 } from "@slack/web-api";
-import { generateObject, generateText } from "ai";
+import { generateText } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";

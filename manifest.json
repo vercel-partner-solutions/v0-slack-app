@@ -1,7 +1,9 @@
 {
   "display_information": {
     "name": "v0",
-    "background_color": "#000000"
+    "description": "Turn your ideas into real web apps with v0.",
+    "background_color": "#000000",
+    "long_description": "v0 turns your ideas into real web apps, no coding required. Describe what you want with natural language, and v0's intelligent agent builds it for you using modern frontend tools. v0 can search the web, inspect sites, automatically fix errors, and integrate with external tools. By removing the technical barriers to web development, anyone can go from concept to working software in minutes."
   },
   "features": {
     "app_home": {
@@ -24,13 +26,13 @@
     "slash_commands": [
       {
         "command": "/sample-command",
-        "url": "https://flavourful-irena-undappled.ngrok-free.dev/api/slack/events",
+        "url": "https://v0-slack-app.labs.vercel.dev/api/slack/events",
         "description": "Runs a sample command",
         "should_escape": false
       }
     ],
     "assistant_view": {
-      "assistant_description": "Slack agent description"
+      "assistant_description": "v0 turns your ideas into real web apps, no coding required. Describe what you want with natural language, and v0's intelligent agent builds it for you using modern frontend tools. v0 can search the web, inspect sites, automatically fix errors, and integrate with external tools."
     }
   },
   "oauth_config": {
@@ -44,13 +46,14 @@
         "im:history",
         "mpim:history",
         "assistant:write",
-        "reactions:write"
+        "reactions:write",
+        "reactions:read"
       ]
     }
   },
   "settings": {
     "event_subscriptions": {
-      "request_url": "https://flavourful-irena-undappled.ngrok-free.dev/api/slack/events",
+      "request_url": "https://v0-slack-app.labs.vercel.dev/api/slack/events",
       "bot_events": [
         "app_home_opened",
         "app_mention",
@@ -64,7 +67,7 @@
     },
     "interactivity": {
       "is_enabled": true,
-      "request_url": "https://flavourful-irena-undappled.ngrok-free.dev/api/slack/events"
+      "request_url": "https://v0-slack-app.labs.vercel.dev/api/slack/events"
     },
     "org_deploy_enabled": true,
     "socket_mode_enabled": false,

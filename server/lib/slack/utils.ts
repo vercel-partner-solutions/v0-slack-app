@@ -62,17 +62,16 @@ export const updateAgentStatus = async ({
 };
 
 // Extend the ModelMessage type with Slack-specific metadata to identify multiple users in the same thread
-export type SlackUIMessage = ModelMessage & {
-  subtype?: string;
-  metadata?: MessageElement & {
-    event_type?: string;
-    event_payload?: {
-      chat_id?: string;
-      [key: string]: any;
-    };
-    [key: string]: any;
+export type SlackUIMessage<TMetadata = Record<string, unknown>> =
+  ModelMessage & {
+    subtype?: string;
+    metadata?: MessageElement & {
+      event_type?: string;
+      event_payload?: {
+        chat_id?: string;
+      } & TMetadata;
+    } & TMetadata;
   };
-};
 
 const getThreadMessages = async (
   args: ConversationsRepliesArguments,
