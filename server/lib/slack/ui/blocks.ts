@@ -115,12 +115,80 @@ export const InitialThinkingBlock = (
   };
 };
 
+// Define a flexible block type that can handle various structures
+type FlexibleBlockElement = {
+  type?: string;
+  text?: string | { text?: string; emoji?: boolean };
+  value?: string;
+  action_id?: string;
+  url?: string;
+};
+
+type FlexibleBlock = {
+  type?: string;
+  elements?: Array<FlexibleBlockElement>;
+  text?: { text?: string };
+};
+
+// Helper function to extract TaskStatus array from block structure
+const extractTaskStatuses = (blocks: Array<FlexibleBlock>): TaskStatus[] => {
+  const taskStatusBlocks = blocks.filter(
+    (block, index) =>
+      index >= 2 && // Skip thinking time (0) and main text (1) blocks
+      block.type === "context" &&
+      block.elements?.[0]?.type === "mrkdwn" &&
+      index !== 0, // Ensure it's not the thinking time block
+  );
+
+  return taskStatusBlocks.map((block) => {
+    const textElement = block.elements?.[0]?.text;
+    const text =
+      typeof textElement === "string" ? textElement : textElement?.text || "";
+    // Parse the "icon text" format
+    const spaceIndex = text.indexOf(" ");
+    if (spaceIndex > 0) {
+      return {
+        icon: text.substring(0, spaceIndex),
+        text: text.substring(spaceIndex + 1),
+      };
+    }
+    // Fallback if format is unexpected
+    return { icon: "❓", text: text };
+  });
+};
+
+// Helper function to extract ButtonConfig array from block structure
+const extractButtons = (blocks: Array<FlexibleBlock>): ButtonConfig[] => {
+  const actionBlock = blocks.find((block) => block.type === "actions");
+  if (!actionBlock || !actionBlock.elements) {
+    return [];
+  }
+
+  return actionBlock.elements.map((element) => {
+    const textObj =
+      typeof element.text === "object" ? element.text : { text: element.text };
+
+    const config: ButtonConfig = {
+      text: textObj?.text || "Unknown",
+      value: element.value || "",
+      actionId: element.action_id || "",
+    };
+
+    if (textObj?.emoji !== undefined) {
+      config.emoji = textObj.emoji;
+    }
+
+    if (element.url) {
+      config.url = element.url;
+    }
+
+    return config;
+  });
+};
+
 export const updateInitialThinkingBlock = (
   originalBlock: {
-    blocks?: Array<{
-      elements?: Array<{ text?: string }>;
-      text?: { text?: string };
-    }>;
+    blocks?: Array<FlexibleBlock>;
   },
   updates: {
     thinkingTime?: string;
@@ -130,14 +198,24 @@ export const updateInitialThinkingBlock = (
   },
 ) => {
   // Extract current values
-  const currentThinkingTime = originalBlock?.blocks?.[0]?.elements?.[0]?.text;
+  const thinkingElement = originalBlock?.blocks?.[0]?.elements?.[0]?.text;
+  const currentThinkingTime =
+    typeof thinkingElement === "string"
+      ? thinkingElement
+      : thinkingElement?.text;
   const currentMainText = originalBlock?.blocks?.[1]?.text?.text;
+  const currentTaskStatuses = originalBlock?.blocks
+    ? extractTaskStatuses(originalBlock.blocks)
+    : undefined;
+  const currentButtons = originalBlock?.blocks
+    ? extractButtons(originalBlock.blocks)
+    : undefined;
 
   // Ensure all required values are available (either from updates or original)
   const finalThinkingTime = updates.thinkingTime ?? currentThinkingTime;
   const finalMainText = updates.mainText ?? currentMainText;
-  const finalTaskStatuses = updates.taskStatuses;
-  const finalButtons = updates.buttons;
+  const finalTaskStatuses = updates.taskStatuses ?? currentTaskStatuses;
+  const finalButtons = updates.buttons ?? currentButtons;
 
   if (
     !finalThinkingTime ||
