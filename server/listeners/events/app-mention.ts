@@ -101,7 +101,7 @@ const generatePromptFromMessages = async (messages: ModelMessage[]) => {
     model: "openai/gpt-4o-mini",
     messages,
     system:
-      "Summarize this thread of messages into a prompt for v0, our generative UI agent. The prompt should be concise and to the point.",
+      "Summarize this thread of messages into a prompt. The prompt should be concise and to the point.",
   });
   return prompt;
 };
