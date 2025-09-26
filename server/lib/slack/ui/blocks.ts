@@ -1,188 +1,246 @@
-import type { Block, Button, KnownBlock, WebClient } from "@slack/web-api";
+// ==========================================
+// UTILITY TYPES
+// ==========================================
 
-export const OpenInV0Button = ({ webUrl }: { webUrl: string }): Button => {
-  return {
+interface ButtonConfig {
+  text: string;
+  emoji?: boolean;
+  value: string;
+  actionId: string;
+  url?: string;
+}
+
+interface TaskStatus {
+  icon: string;
+  text: string;
+}
+
+// ==========================================
+// SMALLER COMPONENTS
+// ==========================================
+
+export const ThinkingTimeContext = (thinkingTime: string) => ({
+  type: "context",
+  elements: [
+    {
+      type: "mrkdwn",
+      text: thinkingTime,
+    },
+  ],
+});
+
+export const MainSectionText = (text: string) => ({
+  type: "section",
+  text: {
+    type: "mrkdwn",
+    text: text,
+  },
+});
+
+export const TaskStatusContext = (status: TaskStatus) => ({
+  type: "context",
+  elements: [
+    {
+      type: "mrkdwn",
+      text: `${status.icon} ${status.text}`,
+    },
+  ],
+});
+
+export const ActionButtons = (buttons: ButtonConfig[]) => ({
+  type: "actions",
+  elements: buttons.map((button) => ({
     type: "button",
     text: {
       type: "plain_text",
-      text: "Open in v0",
+      text: button.text,
+      emoji: button.emoji ?? true,
     },
-    url: webUrl,
-    action_id: "open_in_v0_action",
-    value: webUrl,
-  };
-};
+    value: button.value,
+    action_id: button.actionId,
+    ...(button.url && { url: button.url }),
+  })),
+});
 
-export const ViewDemoButton = ({ demoUrl }: { demoUrl: string }): Button => {
-  return {
-    type: "button",
-    text: {
-      type: "plain_text",
-      text: "View demo",
-    },
-    url: demoUrl,
-    action_id: "view_demo_action",
-    value: demoUrl,
-  };
-};
-
-export const FeedbackButtons = () => {
-  return {
-    type: "context_actions",
-    elements: [
-      {
-        type: "feedback_buttons",
-        action_id: "feedback",
-        positive_button: {
-          text: {
-            type: "plain_text",
-            text: "Good Response",
-          },
-          value: "positive",
-        },
-        negative_button: {
-          text: {
-            type: "plain_text",
-            text: "Bad Response",
-          },
-          value: "negative",
-        },
-      },
-      {
-        type: "icon_button",
-        action_id: "remove",
-        icon: "trash",
+export const FeedbackActions = () => ({
+  type: "context_actions",
+  elements: [
+    {
+      type: "feedback_buttons",
+      action_id: "feedback",
+      positive_button: {
         text: {
           type: "plain_text",
-          text: "Remove",
+          text: "Good Response",
         },
+        value: "positive",
       },
-    ],
-  };
-};
-
-export const ThinkingBlock = ({ text }: { text: string }) => {
-  return {
-    type: "context",
-    elements: [
-      {
-        type: "mrkdwn",
-        text,
+      negative_button: {
+        text: {
+          type: "plain_text",
+          text: "Bad Response",
+        },
+        value: "negative",
       },
-    ],
-  };
-};
-
-type Task = {
-  name: string;
-  status: string;
-  previewLink: URL;
-};
-
-export const TaskRow = ({ task }: { task: Task }) => {
-  return {
-    type: "table_row",
-    elements: [
-      {
-        type: "rich_text_section",
-        elements: [{ type: "text", text: task.name }],
-      },
-      {
-        type: "rich_text_section",
-        elements: [{ type: "text", text: task.status }],
-      },
-      {
-        type: "rich_text_section",
-        elements: [{ type: "text", text: task.previewLink.toString() }],
-      },
-    ],
-  };
-};
-
-export const TaskHeaderRow = () => {
-  return {
-    type: "table_row",
-    elements: [
-      { type: "text", text: "Task" },
-      { type: "text", text: "Status" },
-      { type: "text", text: "Preview" },
-    ],
-  };
-};
-
-export const ToDoBlock = ({ tasks }: { tasks: Task[] }) => {
-  return {
-    type: "table",
-    rows: [TaskHeaderRow(), ...tasks.map((task) => TaskRow({ task }))],
-  };
-};
-
-export const InitialMessageBlock = ({ text }: { text: string }) => {
-  return {
-    type: "section",
-    text: {
-      type: "mrkdwn",
-      text,
     },
-  };
-};
+    {
+      type: "icon_button",
+      action_id: "remove",
+      icon: "trash",
+      text: {
+        type: "plain_text",
+        text: "Remove",
+      },
+    },
+  ],
+});
 
-export const InitialThinkingBlock = ({
-  thinkingText,
-  messageText,
-  tasks,
-}: {
-  thinkingText: string;
-  messageText: string;
-  tasks: Task[];
-}) => {
+// ==========================================
+// MAIN BLOCK FUNCTIONS
+// ==========================================
+
+export const InitialThinkingBlock = (
+  thinkingTime: string,
+  mainText: string,
+  taskStatuses: TaskStatus[],
+  buttons: ButtonConfig[],
+) => {
   return {
     blocks: [
-      ThinkingBlock({ text: thinkingText }),
-      InitialMessageBlock({ text: messageText }),
-      ToDoBlock({ tasks }),
+      ThinkingTimeContext(thinkingTime),
+      MainSectionText(mainText),
+      ...taskStatuses.map((status) => TaskStatusContext(status)),
+      ActionButtons(buttons),
     ],
   };
 };
 
-export const updateTasksBlock = async ({
-  newTasks,
-  messageTs,
-  client,
-  channel,
-}: {
-  newTasks: Task[];
-  messageTs: string;
-  client: WebClient;
-  channel: string;
-}) => {
-  // Get the original message to preserve existing blocks
-  const originalMessage = await client.conversations.history({
-    channel: channel,
-    latest: messageTs,
-    inclusive: true,
-    limit: 1,
-  });
+// Define a flexible block type that can handle various structures
+type FlexibleBlockElement = {
+  type?: string;
+  text?: string | { text?: string; emoji?: boolean };
+  value?: string;
+  action_id?: string;
+  url?: string;
+};
 
-  if (!originalMessage.messages?.[0]?.blocks) {
-    throw new Error("Original message not found or has no blocks");
-  }
+type FlexibleBlock = {
+  type?: string;
+  elements?: Array<FlexibleBlockElement>;
+  text?: { text?: string };
+};
 
-  const originalBlocks = originalMessage.messages[0].blocks;
-
-  // Filter out the existing task-related blocks (table blocks)
-  // Using 'any' here because the blocks may contain custom types not in standard Slack types
-  const nonTaskBlocks = originalBlocks.filter(
-    (block) => !((block as any).type === "table"), // eslint-disable-line @typescript-eslint/no-explicit-any
+// Helper function to extract TaskStatus array from block structure
+const extractTaskStatuses = (blocks: Array<FlexibleBlock>): TaskStatus[] => {
+  const taskStatusBlocks = blocks.filter(
+    (block, index) =>
+      index >= 2 && // Skip thinking time (0) and main text (1) blocks
+      block.type === "context" &&
+      block.elements?.[0]?.type === "mrkdwn",
   );
 
-  // Create the new task block
-  const newTaskBlock = ToDoBlock({ tasks: newTasks });
-
-  // Update with preserved blocks plus new tasks
-  await client.chat.update({
-    channel: channel,
-    ts: messageTs,
-    blocks: [...nonTaskBlocks, newTaskBlock] as (Block | KnownBlock)[],
+  return taskStatusBlocks.map((block) => {
+    const textElement = block.elements?.[0]?.text;
+    const text =
+      typeof textElement === "string" ? textElement : textElement?.text || "";
+    // Parse the "icon text" format
+    const spaceIndex = text.indexOf(" ");
+    if (spaceIndex > 0) {
+      return {
+        icon: text.substring(0, spaceIndex),
+        text: text.substring(spaceIndex + 1),
+      };
+    }
+    // Fallback if format is unexpected
+    return { icon: "❓", text: text };
   });
+};
+
+// Helper function to extract ButtonConfig array from block structure
+const extractButtons = (blocks: Array<FlexibleBlock>): ButtonConfig[] => {
+  const actionBlock = blocks.find((block) => block.type === "actions");
+  if (!actionBlock || !actionBlock.elements) {
+    return [];
+  }
+
+  return actionBlock.elements.map((element) => {
+    const textObj =
+      typeof element.text === "object" ? element.text : { text: element.text };
+
+    const config: ButtonConfig = {
+      text: textObj?.text || "Unknown",
+      value: element.value || "",
+      actionId: element.action_id || "",
+    };
+
+    if (textObj?.emoji !== undefined) {
+      config.emoji = textObj.emoji;
+    }
+
+    if (element.url) {
+      config.url = element.url;
+    }
+
+    return config;
+  });
+};
+
+export const updateInitialThinkingBlock = (
+  originalBlock: {
+    blocks?: Array<FlexibleBlock>;
+  },
+  updates: {
+    thinkingTime?: string;
+    mainText?: string;
+    taskStatuses?: TaskStatus[];
+    buttons?: ButtonConfig[];
+  },
+) => {
+  // Extract current values
+  const thinkingElement = originalBlock?.blocks?.[0]?.elements?.[0]?.text;
+  const currentThinkingTime =
+    typeof thinkingElement === "string"
+      ? thinkingElement
+      : thinkingElement?.text;
+  const currentMainText = originalBlock?.blocks?.[1]?.text?.text;
+  const currentTaskStatuses = originalBlock?.blocks
+    ? extractTaskStatuses(originalBlock.blocks)
+    : undefined;
+  const currentButtons = originalBlock?.blocks
+    ? extractButtons(originalBlock.blocks)
+    : undefined;
+
+  // Ensure all required values are available (either from updates or original)
+  const finalThinkingTime = updates.thinkingTime ?? currentThinkingTime;
+  const finalMainText = updates.mainText ?? currentMainText;
+  const finalTaskStatuses = updates.taskStatuses ?? currentTaskStatuses;
+  const finalButtons = updates.buttons ?? currentButtons;
+
+  if (
+    !finalThinkingTime ||
+    !finalMainText ||
+    !finalTaskStatuses ||
+    !finalButtons
+  ) {
+    throw new Error(
+      "All parameters must be provided either in updates or original block",
+    );
+  }
+
+  return InitialThinkingBlock(
+    finalThinkingTime,
+    finalMainText,
+    finalTaskStatuses,
+    finalButtons,
+  );
+};
+
+export const FinishedBlock = (mainText: string, buttons: ButtonConfig[]) => {
+  return {
+    blocks: [
+      MainSectionText(mainText),
+      ActionButtons(buttons),
+      FeedbackActions(),
+    ],
+  };
 };
