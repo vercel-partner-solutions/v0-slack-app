@@ -1,5 +1,5 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
-import type { AppMentionEvent } from "@slack/types";
+import type { AppMentionEvent } from "@slack/web-api";
 import { generateText, type ModelMessage } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
@@ -101,7 +101,7 @@ const generatePromptFromMessages = async (messages: ModelMessage[]) => {
     model: "openai/gpt-4o-mini",
     messages,
     system:
-      "Summarize the thread messages into a prompt for a software engineer.",
+      "Summarize this thread of messages into a prompt for v0, our generative UI agent. The prompt should be concise and to the point.",
   });
   return prompt;
 };
