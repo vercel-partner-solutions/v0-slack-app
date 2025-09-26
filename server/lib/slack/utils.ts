@@ -191,7 +191,7 @@ export const MessageState = {
     await addReaction({
       channel,
       timestamp,
-      name: "hourglass_flowing_sand",
+      name: "loading",
     });
   },
 
@@ -208,7 +208,7 @@ export const MessageState = {
     await removeReaction({
       channel,
       timestamp,
-      name: "hourglass_flowing_sand",
+      name: "loading",
     });
     await addReaction({
       channel,
@@ -230,7 +230,7 @@ export const MessageState = {
     await removeReaction({
       channel,
       timestamp,
-      name: "hourglass_flowing_sand",
+      name: "loading",
     });
     await addReaction({
       channel,
