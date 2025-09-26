@@ -7,6 +7,7 @@ interface ButtonConfig {
   emoji?: boolean;
   value: string;
   actionId: string;
+  url?: string;
 }
 
 interface TaskStatus {
@@ -57,6 +58,7 @@ export const ActionButtons = (buttons: ButtonConfig[]) => ({
     },
     value: button.value,
     action_id: button.actionId,
+    ...(button.url && { url: button.url }),
   })),
 });
 
