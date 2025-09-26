@@ -3,17 +3,13 @@ import type {
   SayFn,
   SlackEventMiddlewareArgs,
 } from "@slack/bolt";
-import type {
-  ActionsBlockElement,
-  GenericMessageEvent,
-  WebClient,
-} from "@slack/web-api";
+import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
 import { generateText } from "ai";
-import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
-import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { getSession } from "~/lib/auth/session";
+import { getChatIDFromThread } from "~/lib/redis";
 import { updateAgentStatus } from "~/lib/slack/utils";
-import { cleanV0Stream } from "~/lib/v0/utils";
+import { type ChatDetail, chatsCreate, chatsSendMessage } from "~/lib/v0";
 
 const TITLE_MAX_LENGTH = 29;
 const TITLE_PREFIX = "🤖";
@@ -27,10 +23,12 @@ export const directMessageCallback = async ({
   say,
   logger,
   event,
-  client,
+  context,
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
   const { channel, thread_ts } = event;
+  const { teamId, userId } = context;
+  const session = await getSession(teamId, userId);
 
   try {
     const text = validateDirectMessageEvent(event);
@@ -50,21 +48,39 @@ export const directMessageCallback = async ({
     const chatId = await getChatIDFromThread(thread_ts);
 
     if (chatId) {
-      chat = await sendDirectMessageToExistingChat(chatId, text);
+      const { data: existingChat } = await chatsSendMessage({
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+          "X-Scope": session.selectedTeamId,
+        },
+        body: {
+          message: text,
+          responseMode: "sync",
+        },
+        path: { chatId },
+
+        throwOnError: true,
+      });
+      chat = existingChat;
     } else {
-      chat = await createNewChatFromDirectMessage(
-        text,
-        client,
-        channel,
-        thread_ts,
-      );
+      const { data: newChat } = await chatsCreate({
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+          "X-Scope": session.selectedTeamId,
+        },
+        body: {
+          message: text,
+          responseMode: "sync",
+        },
+        throwOnError: true,
+      });
+      chat = newChat;
     }
 
-    const cleanedChat = cleanV0Stream(chat.text);
     const webUrl = chat.webUrl || `https://v0.dev/chat/${chat.id}`;
     const demoUrl = chat.latestVersion?.demoUrl;
 
-    await sendChatResponseToSlack(say, cleanedChat, thread_ts, webUrl, demoUrl);
+    await sendChatResponseToSlack(say, chat.text, thread_ts, webUrl, demoUrl);
   } catch (error) {
     logger.error("Direct message handler failed:", error);
 
@@ -116,48 +132,6 @@ const generateDirectMessageTitle = async (
   });
 
   return `${TITLE_PREFIX} ${title}`;
-};
-
-const createNewChatFromDirectMessage = async (
-  text: string,
-  client: WebClient,
-  channel: string,
-  thread_ts: string,
-): Promise<ChatDetail> => {
-  const title = await generateDirectMessageTitle(text);
-
-  const [projectId] = await Promise.all([
-    v0.projects.create({
-      name: title,
-      instructions: PROJECT_INSTRUCTIONS,
-    }),
-    client.assistant.threads.setTitle({
-      channel_id: channel,
-      thread_ts,
-      title: title,
-    }),
-  ]);
-
-  const chat = (await v0.chats.create({
-    message: text,
-    projectId: projectId.id,
-    responseMode: "sync",
-  })) as ChatDetail;
-
-  await setExistingChat(thread_ts, chat.id);
-
-  return chat;
-};
-
-const sendDirectMessageToExistingChat = async (
-  chatId: string,
-  text: string,
-): Promise<ChatDetail> => {
-  return (await v0.chats.sendMessage({
-    chatId,
-    message: text,
-    responseMode: "sync",
-  })) as ChatDetail;
 };
 
 const sendChatResponseToSlack = async (

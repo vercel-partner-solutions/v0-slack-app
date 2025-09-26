@@ -1,8 +1,8 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
-import type { AppMentionEvent } from "@slack/types";
+import type { AppMentionEvent } from "@slack/web-api";
 import { generateText, type ModelMessage } from "ai";
-import { type ChatDetail, v0 } from "v0-sdk";
-import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { getSession } from "~/lib/auth/session";
+import { getChatIDFromThread } from "~/lib/redis";
 import {
   getThreadMessagesAsModelMessages,
   isV0ChatUrl,
@@ -10,14 +10,28 @@ import {
   tryGetChatIdFromV0Url,
   updateAgentStatus,
 } from "~/lib/slack/utils";
-import { cleanV0Stream } from "~/lib/v0/utils";
+import { chatsCreate, chatsSendMessage } from "~/lib/v0";
+
+const createSessionHeaders = async (teamId: string, userId: string) => {
+  const session = await getSession(teamId, userId);
+  return {
+    Authorization: `Bearer ${session.token}`,
+    // "X-Scope": session.selectedTeamId,
+  };
+};
 
 export const appMentionCallback = async ({
   event,
   say,
   logger,
+  context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   const { channel, thread_ts, ts } = event;
+  const { teamId, userId } = context;
+
+  if (!event.text) {
+    return;
+  }
 
   if (thread_ts) {
     await updateAgentStatus({
@@ -31,7 +45,9 @@ export const appMentionCallback = async ({
   MessageState.setProcessing({
     channel,
     timestamp: ts,
-  }).catch((error) => logger.warn("Failed to set processing reaction:", error));
+  }).catch((error) =>
+    logger.warn("Failed to set processing reaction:", error.message),
+  );
 
   try {
     const { messages } = await getAppMentionContext(event);
@@ -39,17 +55,36 @@ export const appMentionCallback = async ({
       getPromptFromMessages(messages),
       resolveChatId(messages, thread_ts),
     ]);
-    const v0Chat = await processV0Message(chatId, prompt, messages, thread_ts);
-    const summary = formatV0Response(v0Chat);
+
+    const sessionHeaders = await createSessionHeaders(teamId, userId);
+
+    const { data } = chatId
+      ? await chatsSendMessage({
+          ...sessionHeaders,
+          body: {
+            message: prompt,
+            responseMode: "sync",
+          },
+          path: { chatId },
+          throwOnError: true,
+        })
+      : await chatsCreate({
+          ...sessionHeaders,
+          body: {
+            message: prompt,
+            responseMode: "sync",
+          },
+          throwOnError: true,
+        });
 
     await say({
       blocks: [
         {
           type: "markdown",
-          text: summary,
+          text: data.text,
         },
       ],
-      text: summary,
+      text: data.text,
       channel,
       thread_ts: thread_ts || ts,
     });
@@ -59,12 +94,18 @@ export const appMentionCallback = async ({
       timestamp: ts,
     });
   } catch (error) {
-    logger.error("app_mention handler failed:", error);
+    if (error instanceof Error) {
+      logger.error("app_mention handler failed:", error.message);
+    } else {
+      logger.error("app_mention handler failed:", error);
+    }
 
     MessageState.setError({
       channel,
       timestamp: ts,
-    }).catch((error) => logger.warn("Failed to set error reaction:", error));
+    }).catch((error) =>
+      logger.warn("Failed to set error reaction:", error.message),
+    );
   } finally {
     // clear agent status
     if (thread_ts) {
@@ -75,16 +116,6 @@ export const appMentionCallback = async ({
       });
     }
   }
-};
-
-const generateTitleFromMessages = async (messages: ModelMessage[]) => {
-  const { text: title } = await generateText({
-    model: "openai/gpt-4o-mini",
-    messages,
-    system:
-      "Generate a short, concise title for the v0 project in 30 characters or less.",
-  });
-  return title;
 };
 
 const getPromptFromMessages = async (messages: ModelMessage[]) => {
@@ -155,15 +186,6 @@ const getChatIdFromMessages = (messages: ModelMessage[]) => {
   return chatId;
 };
 
-const sendMessageToExistingChat = async (chatId: string, prompt: string) => {
-  const v0Chat = await v0.chats.sendMessage({
-    chatId,
-    message: prompt,
-    responseMode: "sync",
-  });
-  return v0Chat as ChatDetail;
-};
-
 const resolveChatId = async (
   messages: ModelMessage[],
   thread_ts?: string,
@@ -176,56 +198,4 @@ const resolveChatId = async (
 
   // Second priority: existing chat ID from thread
   return await getChatIDFromThread(thread_ts);
-};
-
-const processV0Message = async (
-  chatId: string | undefined,
-  prompt: string,
-  messages: ModelMessage[],
-  thread_ts: string,
-): Promise<ChatDetail> => {
-  if (chatId) {
-    const v0Chat = await sendMessageToExistingChat(chatId, prompt);
-
-    // If we found a chat ID from messages, link the thread
-    const chatIdFromMessages = getChatIdFromMessages(messages);
-    if (chatIdFromMessages && chatIdFromMessages !== chatId) {
-      await setExistingChat(thread_ts, chatIdFromMessages);
-    }
-
-    return v0Chat;
-  } else {
-    const v0Chat = await sendMessageToNewChat(prompt, messages);
-    await setExistingChat(thread_ts, v0Chat.id);
-    return v0Chat;
-  }
-};
-
-const formatV0Response = (v0Chat: ChatDetail): string => {
-  let summary = cleanV0Stream(v0Chat.text);
-  const demoUrl = v0Chat.latestVersion?.demoUrl;
-
-  if (demoUrl) {
-    summary += `\n\n<${demoUrl}|View demo>`;
-  }
-
-  return summary;
-};
-
-const sendMessageToNewChat = async (
-  prompt: string,
-  messages: ModelMessage[],
-) => {
-  const title = await generateTitleFromMessages(messages);
-  const projectId = await v0.projects.create({
-    name: `🤖 ${title}`,
-    instructions:
-      "Do not use integrations in this project. Always skip the integrations step.",
-  });
-  const v0Chat = await v0.chats.create({
-    message: prompt,
-    projectId: projectId.id,
-    responseMode: "sync",
-  });
-  return v0Chat as ChatDetail;
 };

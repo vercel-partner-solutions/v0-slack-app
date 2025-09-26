@@ -1,15 +1,13 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { HomeView } from "@slack/web-api";
-import { Vercel } from "@vercel/sdk";
 import { app } from "~/app";
 import { deleteSession, type Session } from "~/lib/auth/session";
 import { updateAppHomeView } from "~/lib/slack/utils";
+import { userGet, userGetScopes } from "~/lib/v0";
 
 const appHomeOpenedCallback = async ({
-  client,
   event,
   logger,
-  body,
   context,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_home_opened">) => {
   // Ignore the `app_home_opened` event for anything but the Home tab
@@ -31,13 +29,18 @@ export const SignedInView = async (
   session: Session,
   body: { event: { user: string }; team_id: string },
 ): Promise<HomeView> => {
-  const vercel = new Vercel({
-    bearerToken: session?.token,
-  });
   try {
-    const [{ user }, { teams }] = await Promise.all([
-      vercel.user.getAuthUser(),
-      vercel.teams.getTeams({}),
+    const [{ data: scopes }, { data: user }] = await Promise.all([
+      userGetScopes({
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+        },
+      }),
+      userGet({
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+        },
+      }),
     ]);
 
     if (!user) {
@@ -45,12 +48,12 @@ export const SignedInView = async (
       return SignedOutView(body);
     }
 
-    if (!teams) {
+    if (!scopes) {
       app.logger.error("SignedInView failed: teams not found");
       return SignedOutView(body);
     }
 
-    const selectedTeam = teams.find(
+    const selectedTeam = scopes.data.find(
       (team) => team.id === session.selectedTeamId,
     );
 
@@ -62,12 +65,12 @@ export const SignedInView = async (
           elements: [
             {
               type: "image",
-              image_url: `https://vercel.com/api/www/avatar?&u=${user.username}`,
+              image_url: user.avatar,
               alt_text: "profile picture",
             },
             {
               type: "mrkdwn",
-              text: `${user.email ?? user.username}`,
+              text: `${user.email ?? user.name}`,
             },
           ],
         },
@@ -95,7 +98,7 @@ export const SignedInView = async (
                   },
                 }
               : {}),
-            options: teams.map((team) => ({
+            options: scopes.data.map((team) => ({
               text: {
                 type: "plain_text",
                 text: team.name,
