@@ -136,8 +136,7 @@ const extractTaskStatuses = (blocks: Array<FlexibleBlock>): TaskStatus[] => {
     (block, index) =>
       index >= 2 && // Skip thinking time (0) and main text (1) blocks
       block.type === "context" &&
-      block.elements?.[0]?.type === "mrkdwn" &&
-      index !== 0, // Ensure it's not the thinking time block
+      block.elements?.[0]?.type === "mrkdwn",
   );
 
   return taskStatusBlocks.map((block) => {
