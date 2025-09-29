@@ -1,9 +1,3 @@
-import {
-  defineEventHandler,
-  getRequestHost,
-  getRequestIP,
-  sendProxy,
-} from "h3";
 import { app } from "~/app";
 import { validateSignedUrl } from "~/lib/assets/utils";
 
