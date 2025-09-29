@@ -1,7 +1,9 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type {
+  AppMentionEvent,
   ConversationsHistoryArguments,
   ConversationsRepliesArguments,
+  GenericMessageEvent,
 } from "@slack/web-api";
 import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsHistoryResponse";
 import type { ModelMessage } from "ai";
@@ -63,7 +65,6 @@ export const updateAgentStatus = async ({
 
 // Extend the ModelMessage type with Slack-specific metadata to identify multiple users in the same thread
 export type SlackUIMessage = ModelMessage & {
-  subtype?: string;
   metadata?: MessageElement & {
     event_type?: string;
     event_payload?: {
@@ -89,19 +90,12 @@ export const getThreadMessagesAsModelMessages = async (
   const messages = await getThreadMessages(args);
 
   return messages.map((message) => {
-    const { bot_id, text, user, ts, thread_ts, type, subtype, metadata } =
-      message;
+    const { bot_id, text } = message;
     return {
       role: bot_id === botId ? "assistant" : "user",
       content: text,
-      subtype,
       metadata: {
-        user: user || null,
-        bot_id: bot_id || null,
-        ts,
-        thread_ts,
-        type,
-        ...metadata,
+        ...message,
       },
     };
   });
@@ -266,4 +260,26 @@ export const tryGetChatIdFromV0Url = (
   const match = urlString.match(v0ChatIdRegex);
 
   return match?.[1];
+};
+
+export const getMessagesFromEvent = async (
+  event: AppMentionEvent | GenericMessageEvent,
+): Promise<SlackUIMessage[]> => {
+  const { channel, thread_ts, bot_id, text } = event;
+  let messages: SlackUIMessage[] = [];
+  if (thread_ts) {
+    messages = await getThreadMessagesAsModelMessages({
+      channel,
+      ts: thread_ts,
+      botId: bot_id,
+    });
+  } else {
+    messages = [
+      {
+        role: "user",
+        content: text,
+      },
+    ];
+  }
+  return messages;
 };

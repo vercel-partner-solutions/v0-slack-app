@@ -11,6 +11,7 @@ import type {
 import { generateText } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
+import { generateSignedAssetUrl } from "~/lib/assets/utils";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import { updateAgentStatus } from "~/lib/slack/utils";
 import { cleanV0Stream } from "~/lib/v0/utils";
@@ -30,7 +31,7 @@ export const directMessageCallback = async ({
   client,
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
-  const { channel, thread_ts } = event;
+  const { channel, thread_ts, files } = event;
 
   try {
     const text = validateDirectMessageEvent(event);
@@ -48,15 +49,22 @@ export const directMessageCallback = async ({
     let chat: ChatDetail;
 
     const chatId = await getChatIDFromThread(thread_ts);
+    const attachments = createAttachmentsArray(files);
 
     if (chatId) {
-      chat = await sendDirectMessageToExistingChat(chatId, text);
+      chat = (await v0.chats.sendMessage({
+        chatId,
+        message: text,
+        responseMode: "sync",
+        attachments,
+      })) as ChatDetail;
     } else {
       chat = await createNewChatFromDirectMessage(
         text,
         client,
         channel,
         thread_ts,
+        attachments,
       );
     }
 
@@ -123,6 +131,7 @@ const createNewChatFromDirectMessage = async (
   client: WebClient,
   channel: string,
   thread_ts: string,
+  attachments?: { url: string }[],
 ): Promise<ChatDetail> => {
   const title = await generateDirectMessageTitle(text);
 
@@ -141,23 +150,13 @@ const createNewChatFromDirectMessage = async (
   const chat = (await v0.chats.create({
     message: text,
     projectId: projectId.id,
+    attachments: attachments,
     responseMode: "sync",
   })) as ChatDetail;
 
   await setExistingChat(thread_ts, chat.id);
 
   return chat;
-};
-
-const sendDirectMessageToExistingChat = async (
-  chatId: string,
-  text: string,
-): Promise<ChatDetail> => {
-  return (await v0.chats.sendMessage({
-    chatId,
-    message: text,
-    responseMode: "sync",
-  })) as ChatDetail;
 };
 
 const sendChatResponseToSlack = async (
@@ -211,4 +210,27 @@ const sendChatResponseToSlack = async (
     text: cleanedChat,
     thread_ts,
   });
+};
+
+const createAttachmentsArray = (
+  files: { url_private?: string; id: string }[],
+): { url: string }[] => {
+  const formattedFiles = [];
+  for (const file of files) {
+    if (file.url_private) {
+      const signedUrl = generateSignedAssetUrl(file.url_private, {
+        expiryHours: 24,
+        chatId: file.id,
+      });
+
+      formattedFiles.push({
+        ...file,
+        url: signedUrl,
+        url_private: signedUrl,
+      });
+    } else {
+      formattedFiles.push(file);
+    }
+  }
+  return formattedFiles;
 };

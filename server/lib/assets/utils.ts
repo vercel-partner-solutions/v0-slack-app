@@ -1,5 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+const BASE_URL =
+  process.env.PUBLIC_URL || process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://flavourful-irena-undappled.ngrok-free.dev";
+
 const ASSET_SIGNING_SECRET = process.env.ASSET_SIGNING_SECRET;
 const DEFAULT_EXPIRY_HOURS = 24;
 
@@ -9,7 +14,6 @@ export interface SignedUrlOptions {
 }
 
 export function generateSignedAssetUrl(
-  baseUrl: string,
   slackFileUrl: string,
   options: SignedUrlOptions = {},
 ): string {
@@ -36,7 +40,7 @@ export function generateSignedAssetUrl(
     params.set("chat", chatId);
   }
 
-  return `${baseUrl}/assets/${encodeURIComponent(slackFileUrl)}?${params.toString()}`;
+  return `${BASE_URL}/assets/${encodeURIComponent(slackFileUrl)}?${params.toString()}`;
 }
 
 export interface ValidationResult {
@@ -77,7 +81,7 @@ export function validateSignedUrl(
     signature.length === expectedSignature.length &&
     timingSafeEqual(
       Buffer.from(signature, "hex"),
-      Buffer.from(expectedSignature, "hex")
+      Buffer.from(expectedSignature, "hex"),
     );
 
   if (!isValidSignature) {
