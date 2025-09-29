@@ -196,11 +196,8 @@ const sendChatResponseToSlack = async (
   await say({
     blocks: [
       {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: cleanedChat,
-        },
+        type: "markdown",
+        text: cleanedChat,
       },
       {
         type: "actions",
