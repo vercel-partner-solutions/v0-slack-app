@@ -1,8 +1,8 @@
+import ngrok from '@ngrok/ngrok';
+import chalk from 'chalk';
+import dotenv from 'dotenv';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
-import ngrok from '@ngrok/ngrok';
-import dotenv from 'dotenv';
-import chalk from 'chalk';
 
 dotenv.config({ path: '.env', quiet: true });
 
@@ -161,6 +161,8 @@ const main = async () => {
 
   try {
     client = await startNgrok();
+    // Set VERCEL_URL to the ngrok tunnel URL for development
+    process.env.NGROK_URL = client.url();
 
     // Update manifest and backup original content in one pass
     const { updated, originalContent } = await updateManifest(client.url());
