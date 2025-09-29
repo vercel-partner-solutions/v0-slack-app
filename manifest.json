@@ -44,7 +44,9 @@
         "im:history",
         "mpim:history",
         "assistant:write",
-        "reactions:write"
+        "reactions:write",
+        "files:read",
+        "files:write"
       ]
     }
   },
