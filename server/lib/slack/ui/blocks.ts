@@ -32,7 +32,7 @@ export const FeedbackButtons = () => {
     elements: [
       {
         type: "feedback_buttons",
-        action_id: "feedback",
+        action_id: "feedback_action",
         positive_button: {
           text: {
             type: "plain_text",
@@ -46,15 +46,6 @@ export const FeedbackButtons = () => {
             text: "Bad Response",
           },
           value: "negative",
-        },
-      },
-      {
-        type: "icon_button",
-        action_id: "remove",
-        icon: "trash",
-        text: {
-          type: "plain_text",
-          text: "Remove",
         },
       },
     ],
