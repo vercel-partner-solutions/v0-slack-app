@@ -49,7 +49,7 @@ export const directMessageCallback = async ({
     let chat: ChatDetail;
 
     const chatId = await getChatIDFromThread(thread_ts);
-    const attachments = createAttachmentsArray(files);
+    const attachments = createAttachmentsArray(files || []);
 
     if (chatId) {
       chat = (await v0.chats.sendMessage({
@@ -213,9 +213,9 @@ const sendChatResponseToSlack = async (
 };
 
 const createAttachmentsArray = (
-  files: { url_private?: string; id: string }[],
+  files?: { url_private?: string; id: string }[],
 ): { url: string }[] => {
-  const formattedFiles = [];
+  const attachmentsArray = [];
   for (const file of files) {
     if (file.url_private) {
       const signedUrl = generateSignedAssetUrl(file.url_private, {
@@ -223,14 +223,10 @@ const createAttachmentsArray = (
         chatId: file.id,
       });
 
-      formattedFiles.push({
-        ...file,
+      attachmentsArray.push({
         url: signedUrl,
-        url_private: signedUrl,
       });
-    } else {
-      formattedFiles.push(file);
     }
   }
-  return formattedFiles;
+  return attachmentsArray;
 };

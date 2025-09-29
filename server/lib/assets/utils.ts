@@ -5,7 +5,6 @@ const BASE_URL =
     ? `https://${process.env.VERCEL_URL}`
     : "https://flavourful-irena-undappled.ngrok-free.dev";
 
-const ASSET_SIGNING_SECRET = process.env.ASSET_SIGNING_SECRET;
 const DEFAULT_EXPIRY_HOURS = 24;
 
 export interface SignedUrlOptions {
@@ -17,6 +16,10 @@ export function generateSignedAssetUrl(
   slackFileUrl: string,
   options: SignedUrlOptions = {},
 ): string {
+  const { ASSET_SIGNING_SECRET } = process.env;
+  if (!ASSET_SIGNING_SECRET) {
+    throw new Error("ASSET_SIGNING_SECRET environment variable is required");
+  }
   const { expiryHours = DEFAULT_EXPIRY_HOURS, chatId } = options;
 
   // Calculate expiration timestamp
@@ -55,6 +58,10 @@ export function validateSignedUrl(
   expiresAt: string,
   chatId?: string,
 ): ValidationResult {
+  const { ASSET_SIGNING_SECRET } = process.env;
+  if (!ASSET_SIGNING_SECRET) {
+    throw new Error("ASSET_SIGNING_SECRET environment variable is required");
+  }
   // Check if signature and expiry are provided
   if (!signature || !expiresAt) {
     return { isValid: false, error: "Missing signature or expiration" };
