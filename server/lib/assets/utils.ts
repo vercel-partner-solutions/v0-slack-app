@@ -1,10 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-const BASE_URL =
-  process.env.PUBLIC_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "https://flavourful-irena-undappled.ngrok-free.dev";
-
 const DEFAULT_EXPIRY_HOURS = 24;
 
 export interface SignedUrlOptions {
@@ -43,7 +38,7 @@ export function generateSignedAssetUrl(
     params.set("chat", chatId);
   }
 
-  return `${BASE_URL}/assets/${encodeURIComponent(slackFileUrl)}?${params.toString()}`;
+  return `${getBaseUrl()}/assets/${encodeURIComponent(slackFileUrl)}?${params.toString()}`;
 }
 
 export interface ValidationResult {
@@ -99,4 +94,28 @@ export function validateSignedUrl(
     isValid: true,
     chatId: chatId || undefined,
   };
+}
+
+export function getBaseUrl() {
+  const NODE_ENV = process.env.NODE_ENV;
+  const VERCEL_URL = process.env.VERCEL_URL;
+  const NGROK_URL = process.env.NGROK_URL;
+
+  if (NODE_ENV === "development") {
+    // This should be set by the dev.tunnel.ts script
+    // https://github.com/vercel-partner-solutions/v0-slack-app/blob/05563e401da13dfbca4da97b32f50e455e33bdbf/scripts/dev.tunnel.ts#L165
+    if (!NGROK_URL) {
+      throw new Error(
+        "NGROK_URL environment variable is required for development environment",
+      );
+    }
+    return NGROK_URL;
+  } else {
+    if (!VERCEL_URL) {
+      throw new Error(
+        "VERCEL_URL environment variable is required for production environment",
+      );
+    }
+    return `https://${VERCEL_URL}`;
+  }
 }
