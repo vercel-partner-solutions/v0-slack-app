@@ -12,16 +12,18 @@
     "prepare": "nitro prepare",
     "preview": "node .output/server/index.mjs",
     "lint": "biome check .",
-    "lint:fix": "biome check . --write"
+    "lint:fix": "biome check . --write",
+    "openapi": "node --experimental-strip-types scripts/openapi.mts"
   },
   "dependencies": {
+    "@hey-api/openapi-ts": "^0.84.4",
     "@slack/bolt": "^4.4.0",
     "@slack/web-api": "^7.10.0",
     "@vercel/sdk": "^1.11.4",
     "@vercel/slack-bolt": "1.0.2",
     "ai": "latest",
-    "v0-sdk": "^0.12.0",
     "arctic": "^3.7.0",
+    "v0-sdk": "^0.12.0",
     "zod": "^4.0.17"
   },
   "devDependencies": {
