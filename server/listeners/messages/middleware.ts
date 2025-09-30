@@ -6,8 +6,6 @@ import type {
 import type { GenericMessageEvent } from "@slack/web-api";
 import { isV0ChatUrl } from "~/lib/slack/utils";
 
-const urlRegex = /<?(https?:\/\/[^\s>]+)>?/g;
-
 const urlSharedMiddleware = async ({
   event,
   next,
@@ -17,6 +15,7 @@ const urlSharedMiddleware = async ({
     event: GenericMessageEvent;
   }): Promise<void> => {
   const { text } = event;
+  const urlRegex = /<?(https?:\/\/[^\s>]+)>?/g;
 
   if (!text) {
     return;
@@ -32,7 +31,7 @@ const urlSharedMiddleware = async ({
     new Set(urls.filter((url) => isV0ChatUrl(url))),
   );
 
-  const isPublic = event.channel_type === "channel";
+  const isPublic = event.channel_type !== "im";
 
   if (isPublic && uniqueV0Urls.length > 0) {
     for (const v0Url of uniqueV0Urls) {
