@@ -112,7 +112,7 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
   };
 };
 
-const getSignInUrl = (user: string, teamId: string) => {
+export const getSignInUrl = (user: string, teamId: string) => {
   let host = "http://localhost:3000";
   if (process.env.NODE_ENV === "production") {
     host = getBaseUrl();

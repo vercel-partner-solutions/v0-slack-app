@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
       storedVerifier,
     );
   } catch (_error) {
+    app.logger.error("Error validating authorization code:", _error);
     return new Response("Error validating authorization code", { status: 400 });
   }
 
