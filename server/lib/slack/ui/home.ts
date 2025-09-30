@@ -16,11 +16,24 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
   return {
     type: "home",
     blocks: [
+      // Header
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: "Settings",
+        },
+      },
+      {
+        type: "divider",
+      },
+
+      // Team Selection Section
       {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: "*Select Team*",
+          text: "*Team*",
         },
       },
       {
@@ -30,7 +43,7 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
             type: "static_select",
             placeholder: {
               type: "plain_text",
-              text: "Choose a team",
+              text: "Select your team",
             },
             action_id: "team-select-action",
             ...(selectedTeam
@@ -54,12 +67,23 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
           },
         ],
       },
+
+      {
+        type: "divider",
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "*Account*",
+        },
+      },
       {
         type: "context",
         elements: [
           {
             type: "mrkdwn",
-            text: `Signed in as:`,
+            text: "✅ Signed in as:",
           },
           {
             type: "image",
@@ -68,7 +92,7 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
           },
           {
             type: "mrkdwn",
-            text: `${user.email ?? user.username}`,
+            text: `*${user.email ?? user.username}*`,
           },
         ],
       },
@@ -81,6 +105,7 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
               type: "plain_text",
               text: "Sign Out",
             },
+            style: "danger",
             action_id: "sign-out-action",
             value: "sign-out",
           },
@@ -109,21 +134,19 @@ const SignedOutView = (props: SignedOutViewProps): HomeView => {
     type: "home",
     blocks: [
       {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: "Click here to sign in to v0",
-        },
-        accessory: {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: "Sign In",
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: {
+              type: "plain_text",
+              text: "Sign in with Vercel",
+            },
+            style: "primary",
+            url: getSignInUrl(user, teamId),
+            action_id: "sign-in-action",
           },
-          action_id: "sign-in-action",
-          value: "sign-in",
-          url: getSignInUrl(user, teamId),
-        },
+        ],
       },
     ],
   };
