@@ -82,10 +82,6 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
         type: "context",
         elements: [
           {
-            type: "mrkdwn",
-            text: "✅ Signed in as:",
-          },
-          {
             type: "image",
             image_url: `https://vercel.com/api/www/avatar?&u=${user.username}`,
             alt_text: "profile picture",
@@ -105,6 +101,7 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
               type: "plain_text",
               text: "Sign Out",
             },
+            accessibility_label: "Sign Out",
             style: "danger",
             action_id: "sign-out-action",
             value: "sign-out",
@@ -142,7 +139,7 @@ const SignedOutView = (props: SignedOutViewProps): HomeView => {
               type: "plain_text",
               text: "Sign in with Vercel",
             },
-            style: "primary",
+            accessibility_label: "Sign in with Vercel",
             url: getSignInUrl(user, teamId),
             action_id: "sign-in-action",
           },
