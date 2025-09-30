@@ -8,7 +8,6 @@ import type {
   GenericMessageEvent,
   WebClient,
 } from "@slack/web-api";
-import { generateText } from "ai";
 import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
@@ -16,12 +15,9 @@ import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import { updateAgentStatus } from "~/lib/slack/utils";
 import { cleanV0Stream } from "~/lib/v0/utils";
 
-const TITLE_MAX_LENGTH = 29;
-const TITLE_PREFIX = "🤖";
-const DEFAULT_MODEL = "openai/gpt-4o-mini";
 const DEFAULT_ERROR_MESSAGE =
   "Sorry, something went wrong processing your message. Please try again.";
-const PROJECT_INSTRUCTIONS =
+const SYSTEM_PROMPT =
   "Do not use integrations in this project. Always skip the integrations step.";
 
 export const directMessageCallback = async ({
@@ -111,21 +107,6 @@ const validateDirectMessageEvent = (
   return text;
 };
 
-const generateDirectMessageTitle = async (
-  messageText: string,
-): Promise<string> => {
-  const { text: title } = await generateText({
-    model: DEFAULT_MODEL,
-    system: `
-    Take these messages and generate a title that will be given to v0, a generative UI tool. The title should be concise and relevant to the conversation.
-    The title should be no more than ${TITLE_MAX_LENGTH} characters.
-    `,
-    messages: [{ role: "user", content: messageText }],
-  });
-
-  return `${TITLE_PREFIX} ${title}`;
-};
-
 const createNewChatFromDirectMessage = async (
   text: string,
   client: WebClient,
@@ -133,28 +114,19 @@ const createNewChatFromDirectMessage = async (
   thread_ts: string,
   attachments?: { url: string }[],
 ): Promise<ChatDetail> => {
-  const title = await generateDirectMessageTitle(text);
-
-  const [projectId] = await Promise.all([
-    v0.projects.create({
-      name: title,
-      instructions: PROJECT_INSTRUCTIONS,
-    }),
-    client.assistant.threads.setTitle({
-      channel_id: channel,
-      thread_ts,
-      title: title,
-    }),
-  ]);
-
   const chat = (await v0.chats.create({
     message: text,
-    projectId: projectId.id,
     attachments: attachments,
     responseMode: "sync",
+    system: SYSTEM_PROMPT,
   })) as ChatDetail;
 
   await setExistingChat(thread_ts, chat.id);
+  await client.assistant.threads.setTitle({
+    channel_id: channel,
+    thread_ts,
+    title: chat.name || `Chat ${chat.id}`,
+  });
 
   return chat;
 };
