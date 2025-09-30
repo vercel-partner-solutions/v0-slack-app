@@ -1,11 +1,11 @@
 import type { HomeView } from "@slack/web-api";
 import { app } from "~/app";
 import { getBaseUrl } from "~/lib/assets/utils";
-import { getSession } from "~/lib/auth/session";
-import { createVercelClient } from "~/lib/vercel";
+import { deleteSession, getSession } from "~/lib/auth/session";
+import { userGet, userGetScopes } from "~/lib/v0/client";
 
 interface SignedInViewProps {
-  user: { username: string; email: string };
+  user: { username: string; email: string; avatar: string };
   selectedTeam: { id: string; name: string } | null;
   teams: { id: string; name: string }[];
 }
@@ -83,7 +83,7 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
         elements: [
           {
             type: "image",
-            image_url: `https://vercel.com/api/www/avatar?&u=${user.username}`,
+            image_url: user.avatar,
             alt_text: "profile picture",
           },
           {
@@ -170,14 +170,32 @@ export const renderAppHomeView = async (
         teamId: teamId,
       });
     } else {
-      const vercel = createVercelClient(session.token);
+      const { data: scopes, error: scopesError } = await userGetScopes({
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+        },
+      });
 
-      const { user } = await vercel.user.getAuthUser();
-      const { teams } = await vercel.teams.getTeams({});
+      const { data: userData, error: userGetError } = await userGet({
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+        },
+      });
+
+      if (userGetError || scopesError) {
+        app.logger.error("Failed to get user data:", userGetError);
+        await deleteSession(teamId, userId);
+        // rethrow the error
+        throw userGetError || scopesError;
+      }
 
       view = SignedInView({
-        user: { username: user.username, email: user.email },
-        teams: teams.map((team) => ({ id: team.id, name: team.name })),
+        user: {
+          username: userData.name,
+          email: userData.email,
+          avatar: userData.avatar,
+        },
+        teams: scopes.data.map((team) => ({ id: team.id, name: team.name })),
         selectedTeam:
           session.selectedTeamId && session.selectedTeamName
             ? {
