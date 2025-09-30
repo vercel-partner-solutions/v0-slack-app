@@ -125,7 +125,7 @@ const createNewChatFromDirectMessage = async (
   await client.assistant.threads.setTitle({
     channel_id: channel,
     thread_ts,
-    title: chat.name,
+    title: chat.name || `Chat ${chat.id}`,
   });
 
   return chat;
