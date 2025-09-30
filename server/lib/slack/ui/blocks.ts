@@ -199,7 +199,7 @@ export const SignInBlock = ({
     type: "section",
     text: {
       type: "mrkdwn",
-      text: "Please sign in to continue.",
+      text: `Hi, <@${user}>. Please sign in to continue.`,
     },
     accessory: {
       type: "button",

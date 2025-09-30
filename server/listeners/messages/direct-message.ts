@@ -16,9 +16,9 @@ import {
 } from "~/lib/v0/client";
 import { cleanV0Stream } from "~/lib/v0/utils";
 
-const DEFAULT_ERROR_MESSAGE =
+export const DEFAULT_ERROR_MESSAGE =
   "Sorry, something went wrong processing your message. Please try again.";
-const SYSTEM_PROMPT =
+export const SYSTEM_PROMPT =
   "Do not use integrations in this project. Always skip the integrations step.";
 
 export const directMessageCallback = async ({

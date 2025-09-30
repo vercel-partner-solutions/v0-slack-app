@@ -1,10 +1,11 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { AppMentionEvent } from "@slack/web-api";
 import { generateText } from "ai";
-import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
+import { getSession } from "~/lib/auth/session";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { SignInBlock } from "~/lib/slack/ui/blocks";
 import {
   getMessagesFromEvent,
   isV0ChatUrl,
@@ -13,18 +14,39 @@ import {
   tryGetChatIdFromV0Url,
   updateAgentStatus,
 } from "~/lib/slack/utils";
+import {
+  type ChatDetail,
+  chatsCreate,
+  chatsSendMessage,
+} from "~/lib/v0/client";
 import { cleanV0Stream } from "~/lib/v0/utils";
+import {
+  DEFAULT_ERROR_MESSAGE,
+  SYSTEM_PROMPT,
+} from "../messages/direct-message";
 
 export const appMentionCallback = async ({
   event,
+  context,
   say,
   logger,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   const { channel, thread_ts, ts } = event;
-
-  updateAppMentionStatus(event);
+  const { userId, teamId } = context;
 
   try {
+    const session = await getSession(teamId, userId);
+
+    if (!session) {
+      await say({
+        channel,
+        blocks: [SignInBlock({ user: userId, teamId })],
+        text: `Hi, <@${userId}>. Please sign in to continue.`,
+        thread_ts: thread_ts || ts,
+      });
+      return;
+    }
+
     const messages = await getMessagesFromEvent(event);
 
     const [prompt, attachments, chatId] = await Promise.all([
@@ -35,27 +57,59 @@ export const appMentionCallback = async ({
 
     let chat: ChatDetail;
     if (chatId) {
-      const [updatedChat] = (await Promise.all([
-        v0.chats.sendMessage({
-          chatId,
-          message: prompt,
-          responseMode: "sync",
-          attachments: attachments,
-        }),
-        setExistingChat(thread_ts, chatId),
-      ])) as [ChatDetail, undefined];
-      chat = updatedChat;
+      const { data: chatData, error: sendMessageError } =
+        await chatsSendMessage({
+          path: {
+            chatId,
+          },
+          body: {
+            message: prompt,
+            responseMode: "sync",
+            attachments,
+          },
+          headers: {
+            Authorization: `Bearer ${session.token}`,
+            "X-Scope": session.selectedTeamId,
+            "x-v0-client": "slack",
+          },
+        });
+
+      if (sendMessageError) {
+        throw new Error(sendMessageError.error.message, {
+          cause: sendMessageError.error.type,
+        });
+      }
+
+      chat = chatData;
+      await setExistingChat(thread_ts, chat.id);
     } else {
-      chat = (await v0.chats.create({
-        message: prompt,
-        responseMode: "sync",
-        attachments: attachments,
-      })) as ChatDetail;
+      logger.info("Creating new chat");
+      const { data: chatData, error: createChatError } = await chatsCreate({
+        body: {
+          message: event.text,
+          responseMode: "sync",
+          attachments,
+          system: SYSTEM_PROMPT,
+          chatPrivacy: "team-edit",
+        },
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+          "x-scope": session.selectedTeamId,
+          "x-v0-client": "slack",
+        },
+      });
+
+      if (createChatError) {
+        throw new Error(createChatError.error.message, {
+          cause: createChatError.error.type,
+        });
+      }
+
+      chat = chatData;
       await setExistingChat(thread_ts, chat.id);
     }
 
     const summary = formatChatResponse(chat);
-
     await say({
       blocks: [
         {
@@ -73,7 +127,15 @@ export const appMentionCallback = async ({
       timestamp: ts,
     });
   } catch (error) {
-    logger.error("app_mention handler failed:", error);
+    logger.error("Direct message handler failed:", error);
+
+    const errorMessage =
+      error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE;
+
+    await say({
+      text: errorMessage,
+      thread_ts: thread_ts || ts,
+    });
 
     MessageState.setError({
       channel,
@@ -92,12 +154,63 @@ export const appMentionCallback = async ({
 };
 
 const createPromptFromMessages = async (messages: SlackUIMessage[]) => {
+  app.logger.info("Creating prompt from messages", { messages });
   const { text: prompt } = await generateText({
     model: "openai/gpt-4o-mini",
     messages,
-    system:
-      "Summarize this thread of messages into a prompt. The prompt should be concise and to the point.",
+    system: `You are a Prompt Engineering Expert specializing in improving user prompts to "v0", a Next.js and web development code assistant.
+
+    TASK:
+    When given a thread of messages, analyze and enhance it to create a more effective version while maintaining its core purpose. 
+    The requests are being made to "v0", Vercel's AI assistant that specializes in writing code. The messages are in order
+    from oldest to newest. Newer decisions are more important than older decisions.
+
+    ANALYSIS PROCESS:
+
+    1. Evaluate the original prompt:
+
+    - Identify the main objective
+    - Note any ambiguities or gaps
+    - Assess the clarity of instructions
+    - Check for missing context
+
+    2. Apply these prompt engineering principles:
+
+    - Write clear, specific instructions
+    - Include necessary context
+    - Set explicit parameters and constraints
+    - Structure the output format
+    - Add relevant examples
+    - Match tone and complexity to the use case
+    - Remove redundant information
+
+    3. Create the enhanced version:
+
+    - Maintain the original goal
+    - Incorporate identified improvements
+    - Ensure clarity and completeness
+    - Be realistic in the features to add. Multiplayer or advanced 3D graphics aren't reasonable.
+    - Do NOT request a guide, how-to, instructions, etc. unless the user asked for it.
+    - Do NOT ask for code snippets, v0 will handle that.
+    - Do NOT suggest specific technologies unless the user mentioned them.
+    - Do NOT say HOW to do anything, focus on the WHAT.
+    - Do NOT answer questions. Instead, expand upon them and rephrase / rewrite them to be longer and more intricate.
+
+    FORMAT:
+    Provide only the enhanced prompt with no additional commentary or explanations.
+
+    Example input: "A website for my dog"
+    Example output: "Design a personalized Next.js website dedicated to showcasing my dog. Include sections such as a photo gallery, a biography detailing the dog's breed, age, and personality traits, and a blog for sharing stories or updates about your dog's adventures. Add a contact form for visitors to reach out with questions or comments. Ensure the website is visually appealing and easy to navigate, with a responsive design that works well on both desktop and mobile devices."
+
+    Example input: "Convert this to Vercel's tone of voice, maintain the technical details but reduce bullets in favor of narrative. Ensure
+    it's not marketing jargony at all (e.g. remove "enter vercel router")
+
+    Use canvas"
+
+    Example output: "Transform the provided content into a narrative format that aligns with Vercel's tone of voice. Ensure the technical details are preserved while minimizing the use of bullet points. Avoid any marketing jargon, such as phrases like 'enter Vercel router.' Incorporate the concept of using a canvas in the narrative to enhance the explanation."
+`,
   });
+
   return prompt;
 };
 
@@ -113,11 +226,9 @@ const getChatIdFromMessages = (messages: SlackUIMessage[]) => {
           const chatIdFromUrl = tryGetChatIdFromV0Url(url);
           if (chatIdFromUrl) {
             chatId = chatIdFromUrl;
-            break;
           }
         }
       }
-      if (chatId) break;
     }
   }
   return chatId;
@@ -133,7 +244,6 @@ const resolveChatId = async (
     return chatIdFromMessages;
   }
 
-  // Second priority: existing chat ID from thread
   return await getChatIDFromThread(thread_ts);
 };
 
