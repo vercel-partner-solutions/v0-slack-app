@@ -6,6 +6,7 @@ import type {
 import { Vercel } from "@vercel/sdk";
 import { getSession } from "~/lib/auth/session";
 import { redis } from "~/lib/redis";
+import { renderAppHomeView } from "~/lib/slack/ui/home";
 
 export const teamSelectActionCallback = async ({
   ack,
@@ -66,6 +67,11 @@ export const teamSelectActionCallback = async ({
     };
 
     await redis.set(`session:${slackTeamId}:${slackUserId}`, updatedSession);
+
+    await renderAppHomeView({
+      userId: slackUserId,
+      teamId: slackTeamId,
+    });
   } catch (error) {
     logger.error("Team select action callback failed:", error);
   }

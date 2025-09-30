@@ -12,12 +12,55 @@ interface SignedInViewProps {
 
 const SignedInView = (props: SignedInViewProps): HomeView => {
   const { user, selectedTeam, teams } = props;
+
   return {
     type: "home",
     blocks: [
       {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "*Select Team*",
+        },
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "static_select",
+            placeholder: {
+              type: "plain_text",
+              text: "Choose a team",
+            },
+            action_id: "team-select-action",
+            ...(selectedTeam
+              ? {
+                  initial_option: {
+                    text: {
+                      type: "plain_text",
+                      text: selectedTeam.name,
+                    },
+                    value: selectedTeam.id,
+                  },
+                }
+              : {}),
+            options: teams.map((team) => ({
+              text: {
+                type: "plain_text",
+                text: team.name,
+              },
+              value: team.id,
+            })),
+          },
+        ],
+      },
+      {
         type: "context",
         elements: [
+          {
+            type: "mrkdwn",
+            text: `Signed in as:`,
+          },
           {
             type: "image",
             image_url: `https://vercel.com/api/www/avatar?&u=${user.username}`,
@@ -30,53 +73,18 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
         ],
       },
       {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: "Select a team:",
-        },
-        accessory: {
-          type: "static_select",
-          placeholder: {
-            type: "plain_text",
-            text: "Choose a team",
-          },
-          action_id: "team-select-action",
-          ...(selectedTeam
-            ? {
-                initial_option: {
-                  text: {
-                    type: "plain_text",
-                    text: selectedTeam.name,
-                  },
-                  value: selectedTeam.id,
-                },
-              }
-            : {}),
-          options: teams.map((team) => ({
+        type: "actions",
+        elements: [
+          {
+            type: "button",
             text: {
               type: "plain_text",
-              text: team.name,
+              text: "Sign Out",
             },
-            value: team.id,
-          })),
-        },
-      },
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: " ",
-        },
-        accessory: {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: "Sign Out",
+            action_id: "sign-out-action",
+            value: "sign-out",
           },
-          action_id: "sign-out-action",
-          value: "sign-out",
-        },
+        ],
       },
     ],
   };
@@ -126,6 +134,8 @@ interface RenderAppHomeViewProps {
   teamId: string;
 }
 
+// Try to always update the app home view with this function, don't use client.views.publish directly.
+// This will ensure the state of the app home view is always correct.
 export const renderAppHomeView = async (
   props: RenderAppHomeViewProps,
 ): Promise<void> => {
