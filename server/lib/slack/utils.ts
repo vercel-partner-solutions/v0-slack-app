@@ -47,6 +47,11 @@ export const updateAgentStatus = async ({
   thread_ts: string;
   status: string;
 }) => {
+  if (!channel || !thread_ts) {
+    app.logger.warn("updateAgentStatus skipped: missing channel/thread_ts");
+    return;
+  }
+
   try {
     await app.client.assistant.threads.setStatus({
       channel_id: channel,
