@@ -58,15 +58,6 @@ const urlSharedMiddleware = async ({
               },
             ],
           },
-          {
-            type: "context",
-            elements: [
-              {
-                type: "plain_text",
-                text: "This will grant your team edit access to the chat.",
-              },
-            ],
-          },
         ],
         text: `You have shared a chat that may not be visible to everyone.`,
       });
