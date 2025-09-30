@@ -42,21 +42,19 @@ const urlSharedMiddleware = async ({
         thread_ts: event.thread_ts,
         blocks: [
           {
-            type: "markdown",
-            text: `You have shared a chat that may not be visible to everyone.`,
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                text: {
-                  type: "plain_text",
-                  text: "Open chat in v0",
-                },
-                url: `${v0Url}`,
+            type: "section",
+            text: {
+              type: "plain_text",
+              text: `You have shared a chat that may not be visible to the channel`,
+            },
+            accessory: {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Open in v0",
               },
-            ],
+              url: `${v0Url}`,
+            },
           },
         ],
         text: `You have shared a chat that may not be visible to everyone.`,
