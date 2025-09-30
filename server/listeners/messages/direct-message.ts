@@ -4,6 +4,7 @@ import type {
   SlackEventMiddlewareArgs,
 } from "@slack/bolt";
 import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
+
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
 import { getSession } from "~/lib/auth/session";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
@@ -16,9 +17,9 @@ import {
 } from "~/lib/v0/client";
 import { cleanV0Stream } from "~/lib/v0/utils";
 
-export const DEFAULT_ERROR_MESSAGE =
+const DEFAULT_ERROR_MESSAGE =
   "Sorry, something went wrong processing your message. Please try again.";
-export const SYSTEM_PROMPT =
+const SYSTEM_PROMPT =
   "Do not use integrations in this project. Always skip the integrations step.";
 
 export const directMessageCallback = async ({
