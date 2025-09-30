@@ -3,6 +3,7 @@ import type {
   BlockAction,
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
+import { renderAppHomeView } from "~/lib/slack/ui/home";
 
 export const signOutActionCallback = async ({
   ack,
@@ -20,8 +21,7 @@ export const signOutActionCallback = async ({
     logger.error("Sign out action callback failed:", error);
 
     try {
-      const { updateAppHomeView } = await import("~/lib/slack/utils");
-      await updateAppHomeView({
+      await renderAppHomeView({
         userId,
         teamId,
       });

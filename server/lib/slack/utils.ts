@@ -287,54 +287,6 @@ export const getMessagesFromEvent = async (
 export const redirectToSlackHome = (
   event: H3Event<EventHandlerRequest>,
   teamId: string,
-  appId: string,
 ) => {
-  return sendRedirect(
-    event,
-    `slack://app?team=${teamId}&id=${appId}&tab=home`,
-    302,
-  );
-};
-
-export const updateAppHomeView = async ({
-  userId,
-  teamId,
-}: {
-  userId: string;
-  teamId: string;
-}) => {
-  try {
-    const { getSession } = await import("~/lib/auth/session");
-    const { SignedInView, SignedOutView } = await import(
-      "~/listeners/events/app-home-opened"
-    );
-
-    const session = await getSession(teamId, userId);
-
-    const body = {
-      event: { user: userId },
-      team_id: teamId,
-    };
-
-    const view = session
-      ? await SignedInView(session, body)
-      : SignedOutView(body);
-
-    await app.client.views.publish({
-      user_id: userId,
-      view,
-    });
-
-    app.logger.info("App home view updated successfully", {
-      userId,
-      teamId,
-      hasSession: !!session,
-    });
-  } catch (error) {
-    app.logger.error("Failed to update app home view:", {
-      userId,
-      teamId,
-      error,
-    });
-  }
+  return sendRedirect(event, `slack://app?team=${teamId}`, 302);
 };

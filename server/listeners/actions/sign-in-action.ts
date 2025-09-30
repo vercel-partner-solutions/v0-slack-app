@@ -3,19 +3,18 @@ import type {
   BlockAction,
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
-import { updateAppHomeView } from "~/lib/slack/utils";
+import { renderAppHomeView } from "~/lib/slack/ui/home";
 
 export const signInActionCallback = async ({
   ack,
   logger,
-  client,
   context,
 }: AllMiddlewareArgs & SlackActionMiddlewareArgs<BlockAction>) => {
   try {
     await ack();
     const { userId, teamId } = context;
 
-    await updateAppHomeView({
+    await renderAppHomeView({
       userId,
       teamId,
     });

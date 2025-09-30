@@ -35,8 +35,8 @@ export default defineEventHandler(async (event) => {
 
   // Update the app home view to reflect the signed-out state
   try {
-    const { updateAppHomeView } = await import("~/lib/slack/utils");
-    await updateAppHomeView({
+    const { renderAppHomeView } = await import("~/lib/slack/ui/home");
+    await renderAppHomeView({
       userId: slackUserId,
       teamId: slackTeamId,
     });

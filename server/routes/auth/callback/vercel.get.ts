@@ -62,12 +62,12 @@ export default defineEventHandler(async (event) => {
       expiresIn: tokens.accessTokenExpiresAt().getTime(),
     });
 
-    // Update the app home view to reflect the signed-in state
-    const { updateAppHomeView } = await import("~/lib/slack/utils");
-    await updateAppHomeView({
+    const { renderAppHomeView } = await import("~/lib/slack/ui/home");
+    await renderAppHomeView({
       userId: storedSlackUserId,
       teamId: storedSlackTeamId,
     });
+    // Update the app home view to reflect the signed-in state
   } catch (error) {
     app.logger.error("Failed to create session:", error);
     return new Response(null, { status: 500 });
