@@ -81,17 +81,6 @@ export default defineEventHandler(async (event): Promise<void> => {
     sameSite: "lax" as const,
   };
 
-  // Log the values being set in cookies
-  app.logger.info("Setting OAuth cookies:", {
-    slackUserId,
-    slackTeamId,
-    state: state ? "present" : "missing",
-    verifier: verifier ? "present" : "missing",
-    redirectTo,
-    slackUserIdType: typeof slackUserId,
-    slackUserIdLength: slackUserId?.length,
-  });
-
   setCookie(event, "vercel_oauth_redirect_to", redirectTo, cookieOptions);
   setCookie(event, "vercel_oauth_state", state, cookieOptions);
   setCookie(event, "vercel_oauth_code_verifier", verifier, cookieOptions);

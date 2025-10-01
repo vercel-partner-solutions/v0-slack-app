@@ -168,27 +168,6 @@ export const renderAppHomeView = async (
 ): Promise<void> => {
   const { userId, teamId, session } = props;
 
-  // Validate user ID format
-  if (!userId || typeof userId !== "string" || userId.trim() === "") {
-    app.logger.error("Invalid user ID provided to renderAppHomeView:", {
-      userId,
-      userIdType: typeof userId,
-      teamId,
-      hasSession: !!session,
-    });
-    throw new Error(`Invalid user ID: ${userId}`);
-  }
-
-  // Check if user ID looks like a valid Slack user ID (starts with U and is 9+ characters)
-  if (!userId.match(/^U[A-Z0-9]{8,}$/)) {
-    app.logger.error("User ID does not match Slack user ID format:", {
-      userId,
-      teamId,
-      hasSession: !!session,
-    });
-    throw new Error(`Invalid Slack user ID format: ${userId}`);
-  }
-
   try {
     let view: HomeView;
 
@@ -238,12 +217,6 @@ export const renderAppHomeView = async (
       });
     }
 
-    app.logger.info("Publishing app home view to Slack:", {
-      userId,
-      teamId,
-      viewType: view.type,
-    });
-
     await app.client.views.publish({
       view,
       user_id: userId,
@@ -258,5 +231,91 @@ export const renderAppHomeView = async (
       }),
       user_id: userId,
     });
+  }
+};
+
+/**
+ * Updates the app home view for a specific user after sign-in.
+ * This function can be called from OAuth callbacks or other non-event contexts.
+ * It uses the bot token directly to publish the view.
+ */
+export const updateAppHomeViewAfterSignIn = async (
+  userId: string,
+  teamId: string,
+  session: Session,
+): Promise<void> => {
+  try {
+    app.logger.info("Updating app home view after sign-in:", {
+      userId,
+      teamId,
+      hasSession: !!session,
+    });
+
+    // Create the signed-in view
+    const [scopesResult, userResult] = await Promise.all([
+      userGetScopes({
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+        },
+      }),
+      userGet({
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+        },
+      }),
+    ]);
+
+    const { data: scopes, error: scopesError } = scopesResult;
+    const { data: userData, error: userGetError } = userResult;
+
+    if (userGetError || scopesError) {
+      app.logger.error(
+        "Failed to get user data for app home update:",
+        userGetError || scopesError,
+      );
+      throw userGetError || scopesError;
+    }
+
+    const view = SignedInView({
+      user: {
+        username: userData.name,
+        email: userData.email,
+        avatar: userData.avatar,
+      },
+      teams: scopes.data.map((team) => ({ id: team.id, name: team.name })),
+      selectedTeam:
+        session.selectedTeamId && session.selectedTeamName
+          ? {
+              id: session.selectedTeamId,
+              name: session.selectedTeamName,
+            }
+          : null,
+    });
+
+    // Use the bot token directly to publish the view
+    await app.client.views.publish({
+      view,
+      user_id: userId,
+    });
+
+    app.logger.info("Successfully updated app home view after sign-in");
+  } catch (error) {
+    app.logger.error("Failed to update app home view after sign-in:", error);
+
+    // Fallback: try to publish a simple signed-out view
+    try {
+      await app.client.views.publish({
+        view: SignedOutView({
+          user: userId,
+          teamId: teamId,
+        }),
+        user_id: userId,
+      });
+    } catch (fallbackError) {
+      app.logger.error(
+        "Failed to publish fallback app home view:",
+        fallbackError,
+      );
+    }
   }
 };

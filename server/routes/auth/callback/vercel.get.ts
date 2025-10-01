@@ -3,7 +3,8 @@ import type { EventHandlerRequest, H3Event } from "h3";
 import { app } from "~/app";
 import { REDIRECT_PATH, TOKEN_PATH } from "~/lib/auth/constants";
 import { createSession } from "~/lib/auth/session";
-import { renderAppHomeView } from "~/lib/slack/ui/home";
+import { updateAppHomeViewAfterSignIn } from "~/lib/slack/ui/home";
+import { redirectToSlackHome } from "~/lib/slack/utils";
 
 export default defineEventHandler(async (event) => {
   const { code, state, error, error_description } =
@@ -18,17 +19,6 @@ export default defineEventHandler(async (event) => {
   const storedRedirectTo = getCookie(event, "vercel_oauth_redirect_to") ?? null;
   const storedSlackUserId = getCookie(event, "slack_user_id") ?? null;
   const storedSlackTeamId = getCookie(event, "slack_team_id") ?? null;
-
-  // Log cookie values for debugging
-  app.logger.info("OAuth callback cookie values:", {
-    storedSlackUserId,
-    storedSlackTeamId,
-    storedState: storedState ? "present" : "missing",
-    storedVerifier: storedVerifier ? "present" : "missing",
-    storedRedirectTo,
-    slackUserIdType: typeof storedSlackUserId,
-    slackUserIdLength: storedSlackUserId?.length,
-  });
 
   if (
     !isValidOAuthCallbackParams(
@@ -79,26 +69,23 @@ export default defineEventHandler(async (event) => {
         ),
       ),
     });
-    // If the app home view fails to render, log the error and continue
-    app.logger.info("About to render app home view with session data:", {
-      slackUserId: session.slackUserId,
-      slackTeamId: session.slackTeamId,
-      userIdType: typeof session.slackUserId,
-      userIdLength: session.slackUserId?.length,
+    // Update the app home view immediately after sign-in
+    await updateAppHomeViewAfterSignIn(
+      session.slackUserId,
+      session.slackTeamId,
+      session,
+    ).catch((error: Error) => {
+      app.logger.error("Failed to update app home view after sign-in:", error);
+      // Continue with redirect even if view update fails
     });
 
-    await renderAppHomeView({
-      userId: session.slackUserId,
-      teamId: session.slackTeamId,
-      session,
-    }).catch((error: Error) => {
-      app.logger.error("Failed to render app home view after sign-in:", {
-        error: error.message,
-        stack: error.stack,
+    app.logger.info(
+      "Session created successfully, app home view updated, user will be redirected to Slack",
+      {
         slackUserId: session.slackUserId,
         slackTeamId: session.slackTeamId,
-      });
-    });
+      },
+    );
   } catch (error) {
     app.logger.error("Failed to create session:", error);
     return new Response(null, { status: 500 });
@@ -111,7 +98,7 @@ export default defineEventHandler(async (event) => {
   deleteCookie(event, "slack_user_id");
   deleteCookie(event, "slack_team_id");
 
-  return sendRedirect(event, "slack://open", 302);
+  return redirectToSlackHome(event, storedSlackTeamId);
 });
 
 const isValidOAuthCallbackParams = (
