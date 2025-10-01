@@ -1,12 +1,9 @@
-import type { HomeView } from "@slack/web-api";
 import { OAuth2Client, type OAuth2Tokens } from "arctic";
 import type { EventHandlerRequest, H3Event } from "h3";
 import { app } from "~/app";
 import { REDIRECT_PATH, TOKEN_PATH } from "~/lib/auth/constants";
-import { createSession, type Session } from "~/lib/auth/session";
-import { SignedInLoadingView, SignedInView } from "~/lib/slack/ui/home";
+import { createSession } from "~/lib/auth/session";
 import { redirectToSlackHome } from "~/lib/slack/utils";
-import { userGet, userGetScopes } from "~/lib/v0/client";
 
 export default defineEventHandler(async (event) => {
   const { code, state, error, error_description } =
@@ -71,16 +68,12 @@ export default defineEventHandler(async (event) => {
         ),
       ),
     });
-    // Update the app home view using Slack REST API directly, don't await redirect to Slack
-    updateAppHomeViewWithRestAPI(
-      session.slackUserId,
-      session.slackTeamId,
-      session,
-    ).catch((error: Error) => {
-      app.logger.error("Failed to update app home view:", error);
-    });
+    // Note: We don't update the app home view here because the Slack API
+    // requires proper event context to publish views for users.
+    // The app_home_opened event will handle updating the view when the user
+    // navigates to their app home tab.
     app.logger.info(
-      "Session created successfully, app home view updated, user will be redirected to Slack app home",
+      "Session created successfully, user will be redirected to Slack app home",
       {
         slackUserId: session.slackUserId,
         slackTeamId: session.slackTeamId,
@@ -131,89 +124,3 @@ const parseOAuthCallbackParams = (event: H3Event<EventHandlerRequest>) => {
     error_description: error_description as string,
   };
 };
-
-/**
- * Updates the app home view using Slack REST API directly with the bot token.
- * This bypasses the need for event context and works from OAuth callbacks.
- */
-async function updateAppHomeViewWithRestAPI(
-  userId: string,
-  teamId: string,
-  session: Session,
-): Promise<void> {
-  try {
-    app.logger.info("Updating app home view with REST API:", {
-      userId,
-      teamId,
-      hasSession: !!session,
-    });
-
-    await publishViewToSlack(userId, SignedInLoadingView());
-    app.logger.info("Published loading state to app home");
-
-    // Step 2: Get user data from Vercel API
-    const [scopesResult, userResult] = await Promise.all([
-      userGetScopes({
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-        },
-      }),
-      userGet({
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-        },
-      }),
-    ]);
-
-    const { data: scopes, error: scopesError } = scopesResult;
-    const { data: userData, error: userGetError } = userResult;
-
-    if (userGetError || scopesError) {
-      app.logger.error("Failed to get user data:", userGetError || scopesError);
-      throw userGetError || scopesError;
-    }
-
-    await publishViewToSlack(
-      userId,
-      SignedInView({
-        user: {
-          username: userData.name,
-          email: userData.email,
-          avatar: userData.avatar,
-        },
-        selectedTeam: null,
-        teams: scopes.data.map((scope) => ({ id: scope.id, name: scope.name })),
-      }),
-    );
-    app.logger.info("Successfully updated app home view with final state");
-  } catch (error) {
-    app.logger.error("Failed to update app home view with REST API:", error);
-  }
-}
-
-/**
- * Helper function to publish a view to Slack using the REST API
- */
-async function publishViewToSlack(
-  userId: string,
-  view: HomeView,
-): Promise<void> {
-  const response = await fetch("https://slack.com/api/views.publish", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      user_id: userId,
-      view: view,
-    }),
-  });
-
-  const result = await response.json();
-
-  if (!result.ok) {
-    app.logger.error("Slack API error:", result);
-    throw new Error(`Slack API error: ${result.error}`);
-  }
-}
