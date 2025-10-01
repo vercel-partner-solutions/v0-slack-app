@@ -152,7 +152,7 @@ const SignedOutView = (props: SignedOutViewProps): HomeView => {
 interface RenderAppHomeViewProps {
   userId: string;
   teamId: string;
-  session: Session;
+  session: Session | null;
 }
 
 // Try to always update the app home view with this function, don't use client.views.publish directly.
