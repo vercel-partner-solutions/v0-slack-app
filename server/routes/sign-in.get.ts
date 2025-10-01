@@ -5,7 +5,6 @@ import {
   OAuth2Client,
 } from "arctic";
 import { app } from "~/app";
-import { getBaseUrl } from "~/lib/assets/utils";
 import { AUTHORIZE_PATH, REDIRECT_PATH, SCOPES } from "~/lib/auth/constants";
 import { getSession } from "~/lib/auth/session";
 import { redirectToSlackHome } from "~/lib/slack/utils";
@@ -41,20 +40,7 @@ export default defineEventHandler(async (event): Promise<void> => {
   }
 
   const eventUrl = getRequestURL(event);
-  const { protocol } = eventUrl;
-
-  const isDev =
-    process.env.VERCEL_ENV === "development" ||
-    process.env.NODE_ENV === "development";
-
-  let host: string;
-  if (isDev) {
-    // we use localhost because we don't have a callback URL set up for NGROK
-    host = "localhost:3000";
-  } else {
-    host = getBaseUrl();
-  }
-
+  const { protocol, host } = eventUrl;
   const redirectUrl = new URL(REDIRECT_PATH, `${protocol}//${host}`).toString();
 
   if (!VERCEL_CLIENT_ID || !VERCEL_CLIENT_SECRET) {
