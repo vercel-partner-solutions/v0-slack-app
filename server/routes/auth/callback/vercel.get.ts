@@ -68,12 +68,8 @@ export default defineEventHandler(async (event) => {
         ),
       ),
     });
-    // Note: We don't update the app home view here because the Slack API
-    // requires proper event context to publish views for users.
-    // The app_home_opened event will handle updating the view when the user
-    // navigates to their app home tab.
     app.logger.info(
-      "Session created successfully, user will be redirected to Slack app home",
+      "Session created successfully, redirecting to Slack home...",
       {
         slackUserId: session.slackUserId,
         slackTeamId: session.slackTeamId,

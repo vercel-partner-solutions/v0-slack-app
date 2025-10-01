@@ -1,10 +1,10 @@
 import type { App } from "@slack/bolt";
 import { feedbackActionCallback } from "./feedback-action";
 import { openInV0ActionCallback } from "./open-in-v0-action";
+import { removeActionCallback } from "./remove-action";
 import { signInActionCallback } from "./sign-in-action";
 import { signOutActionCallback } from "./sign-out-action";
 import { teamSelectActionCallback } from "./team-select-action";
-import { removeActionCallback } from "./remove-action";
 import { viewDemoActionCallback } from "./view-demo-action";
 
 const register = (app: App) => {
