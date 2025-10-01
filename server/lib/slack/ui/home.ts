@@ -114,7 +114,9 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
 
 export const getSignInUrl = (user: string, teamId: string) => {
   let host = getBaseUrl();
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev =
+    process.env.VERCEL_ENV === "development" ||
+    process.env.NODE_ENV === "development";
 
   if (isDev) {
     // we use localhost because we don't have a callback URL set up for NGROK
