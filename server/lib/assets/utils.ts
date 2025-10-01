@@ -97,11 +97,13 @@ export function validateSignedUrl(
 }
 
 export function getBaseUrl() {
-  const NODE_ENV = process.env.NODE_ENV;
   const VERCEL_URL = process.env.VERCEL_URL;
   const NGROK_URL = process.env.NGROK_URL;
+  const VERCEL_ENV = process.env.VERCEL_ENV;
+  const VERCEL_PROJECT_PRODUCTION_URL =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL;
 
-  if (NODE_ENV === "development") {
+  if (VERCEL_ENV === "development") {
     // This should be set by the dev.tunnel.ts script
     // https://github.com/vercel-partner-solutions/v0-slack-app/blob/05563e401da13dfbca4da97b32f50e455e33bdbf/scripts/dev.tunnel.ts#L165
     if (!NGROK_URL) {
@@ -110,12 +112,20 @@ export function getBaseUrl() {
       );
     }
     return NGROK_URL;
-  } else {
+  } else if (VERCEL_ENV === "preview") {
     if (!VERCEL_URL) {
       throw new Error(
-        "VERCEL_URL environment variable is required for production environment",
+        "VERCEL_URL environment variable is required for preview environment",
       );
     }
     return `https://${VERCEL_URL}`;
   }
+
+  if (!VERCEL_PROJECT_PRODUCTION_URL) {
+    throw new Error(
+      "VERCEL_PROJECT_PRODUCTION_URL environment variable is required for production environment",
+    );
+  }
+
+  return `https://${VERCEL_PROJECT_PRODUCTION_URL}`;
 }
