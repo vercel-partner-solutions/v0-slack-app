@@ -1,39 +1,30 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
+import { renderAppHomeView } from "~/lib/slack/ui/home";
 
-const appHomeOpenedCallback = async ({
-  client,
+export const appHomeOpenedCallback = async ({
   event,
+  context,
   logger,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_home_opened">) => {
   // Ignore the `app_home_opened` event for anything but the Home tab
   if (event.tab !== "home") return;
 
-  try {
-    await client.views.publish({
-      user_id: event.user,
-      view: {
-        type: "home",
-        blocks: [
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: `*Welcome home, <@${event.user}> :house:*`,
-            },
-          },
-          {
-            type: "section",
-            text: {
-              type: "mrkdwn",
-              text: "Learn how home tabs can be more useful and interactive <https://api.slack.com/surfaces/tabs/using|*in the documentation*>.",
-            },
-          },
-        ],
-      },
-    });
-  } catch (error) {
-    logger.error("app_home_opened handler failed:", error);
-  }
-};
+  const { userId, teamId, session } = context;
 
-export default appHomeOpenedCallback;
+  if (!userId || !teamId) {
+    logger.error(
+      "App home opened callback failed: no user ID or team ID found",
+      {
+        userId,
+        teamId,
+      },
+    );
+    return;
+  }
+
+  await renderAppHomeView({
+    userId,
+    teamId,
+    session,
+  });
+};

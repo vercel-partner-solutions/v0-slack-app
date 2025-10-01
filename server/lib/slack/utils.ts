@@ -13,8 +13,8 @@ import type {
 } from "@slack/web-api";
 import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsHistoryResponse";
 import type { ModelMessage } from "ai";
+import type { EventHandlerRequest, H3Event } from "h3";
 import { app } from "~/app";
-
 /**
  * Helper function to create a middleware that only runs a callback if the message
  * is in a specific Slack channel type.
@@ -80,9 +80,9 @@ export type SlackUIMessage = ModelMessage & {
     event_type?: string;
     event_payload?: {
       chat_id?: string;
-      [key: string]: any;
+      [key: string]: unknown;
     };
-    [key: string]: any;
+    [key: string]: unknown;
   };
 };
 
@@ -95,15 +95,14 @@ const getThreadMessages = async (
 };
 
 export const getThreadMessagesAsModelMessages = async (
-  args: ConversationsRepliesArguments & { botId: string },
+  args: ConversationsRepliesArguments,
 ): Promise<SlackUIMessage[]> => {
-  const { botId } = args;
   const messages = await getThreadMessages(args);
 
   return messages.map((message) => {
     const { bot_id, text } = message;
     return {
-      role: bot_id === botId ? "assistant" : "user",
+      role: bot_id ? "assistant" : "user",
       content: text,
       metadata: {
         ...message,
@@ -276,13 +275,12 @@ export const tryGetChatIdFromV0Url = (
 export const getMessagesFromEvent = async (
   event: AppMentionEvent | GenericMessageEvent,
 ): Promise<SlackUIMessage[]> => {
-  const { channel, thread_ts, bot_id, text } = event;
+  const { channel, thread_ts, text } = event;
   let messages: SlackUIMessage[] = [];
   if (thread_ts) {
     messages = await getThreadMessagesAsModelMessages({
       channel,
       ts: thread_ts,
-      botId: bot_id,
     });
   } else {
     messages = [
@@ -293,6 +291,17 @@ export const getMessagesFromEvent = async (
     ];
   }
   return messages;
+};
+
+export const redirectToSlackHome = (
+  event: H3Event<EventHandlerRequest>,
+  teamId: string,
+) => {
+  return sendRedirect(event, `slack://app?team=${teamId}`, 302);
+};
+
+export const stripSlackUserTags = (text: string) => {
+  return text.replace(/<@[^>]+>\s*/g, "").trim();
 };
 
 export function buttonActionOrPlainTextInputAction(

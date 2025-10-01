@@ -3,38 +3,53 @@ import type {
   SayFn,
   SlackEventMiddlewareArgs,
 } from "@slack/bolt";
-import type {
-  ActionsBlockElement,
-  GenericMessageEvent,
-  WebClient,
-} from "@slack/web-api";
-import { type ChatDetail, v0 } from "v0-sdk";
-import { app } from "~/app";
+import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
+
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { SignInBlock } from "~/lib/slack/ui/blocks";
 import { updateAgentStatus } from "~/lib/slack/utils";
+import {
+  type ChatDetail,
+  chatsCreate,
+  chatsSendMessage,
+} from "~/lib/v0/client";
 import { cleanV0Stream } from "~/lib/v0/utils";
 
-const DEFAULT_ERROR_MESSAGE =
+export const DEFAULT_ERROR_MESSAGE =
   "Sorry, something went wrong processing your message. Please try again.";
-const SYSTEM_PROMPT =
+export const SYSTEM_PROMPT =
   "Do not use integrations in this project. Always skip the integrations step.";
 
 export const directMessageCallback = async ({
   say,
+  message,
   logger,
   event,
   client,
+  context,
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
   const { channel, thread_ts, files } = event;
+  const { session } = context;
+
+  // we only support message events from users. Subtypes can be seen here: https://docs.slack.dev/reference/events/message/
+  if (message.subtype) {
+    logger.warn("Direct message event received with subtype. Skipping...", {
+      subtype: message.subtype,
+    });
+    return;
+  }
+
+  // Use event.text instead of message.text, since message.text may not exist on all event types
+  if (!event.text) {
+    logger.warn("Direct message event received with no text. Skipping...", {
+      event,
+    });
+    return;
+  }
 
   try {
-    const text = validateDirectMessageEvent(event);
-    if (!text) {
-      return;
-    }
-
     // Fire-and-forget status update to avoid blocking
     updateAgentStatus({
       channel,
@@ -42,38 +57,80 @@ export const directMessageCallback = async ({
       status: "is thinking...",
     }).catch((error) => logger.warn("Failed to update agent status:", error));
 
+    if (!session) {
+      await client.chat.postEphemeral({
+        channel,
+        user: context.userId,
+        blocks: [SignInBlock({ user: context.userId, teamId: context.teamId })],
+        text: "Please sign in to continue.",
+        thread_ts,
+      });
+      return;
+    }
+
     let chat: ChatDetail;
 
     const chatId = await getChatIDFromThread(thread_ts);
     const attachments = createAttachmentsArray(files || []);
 
     if (chatId) {
-      chat = (await v0.chats.sendMessage({
-        chatId,
-        message: text,
-        responseMode: "sync",
-        attachments,
-      })) as ChatDetail;
+      const { data: chatData, error } = await chatsSendMessage({
+        path: {
+          chatId,
+        },
+        body: {
+          message: event.text,
+          responseMode: "sync",
+          attachments,
+        },
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+          "X-Scope": session.selectedTeamId,
+          "x-v0-client": "slack",
+        },
+      });
+
+      if (error) {
+        throw new Error(error.error.message, { cause: error.error.type });
+      }
+
+      chat = chatData;
     } else {
-      chat = await createNewChatFromDirectMessage(
-        text,
-        client,
-        channel,
-        thread_ts,
-        attachments,
-      );
+      const { data: chatData, error } = await chatsCreate({
+        body: {
+          message: event.text,
+          responseMode: "sync",
+          attachments,
+          system: SYSTEM_PROMPT,
+        },
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+          "x-scope": session.selectedTeamId,
+          "x-v0-client": "slack",
+        },
+      });
+
+      if (error) {
+        throw new Error(error.error.message, { cause: error.error.type });
+      }
+
+      chat = chatData;
     }
+    await setExistingChat(thread_ts, chat.id);
 
     const cleanedChat = cleanV0Stream(chat.text);
     const webUrl = chat.webUrl || `https://v0.dev/chat/${chat.id}`;
     const demoUrl = chat.latestVersion?.demoUrl;
 
     await sendChatResponseToSlack(say, cleanedChat, thread_ts, webUrl, demoUrl);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Direct message handler failed:", error);
 
+    const errorMessage =
+      error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE;
+
     await say({
-      text: DEFAULT_ERROR_MESSAGE,
+      text: errorMessage,
       thread_ts,
     });
   } finally {
@@ -84,51 +141,6 @@ export const directMessageCallback = async ({
       status: "",
     });
   }
-};
-
-const validateDirectMessageEvent = (
-  event: GenericMessageEvent,
-): string | null => {
-  const { text, subtype } = event;
-
-  if (subtype === "message_changed") {
-    app.logger.warn(
-      "Direct message event received with message_changed subtype. Skipping...",
-    );
-    return null;
-  }
-
-  if (!text) {
-    app.logger.warn("Direct message event received with no text \n");
-    app.logger.warn("Event:", event);
-    return null;
-  }
-
-  return text;
-};
-
-const createNewChatFromDirectMessage = async (
-  text: string,
-  client: WebClient,
-  channel: string,
-  thread_ts: string,
-  attachments?: { url: string }[],
-): Promise<ChatDetail> => {
-  const chat = (await v0.chats.create({
-    message: text,
-    attachments: attachments,
-    responseMode: "sync",
-    system: SYSTEM_PROMPT,
-  })) as ChatDetail;
-
-  await setExistingChat(thread_ts, chat.id);
-  await client.assistant.threads.setTitle({
-    channel_id: channel,
-    thread_ts,
-    title: chat.name || `Chat ${chat.id}`,
-  });
-
-  return chat;
 };
 
 const sendChatResponseToSlack = async (
