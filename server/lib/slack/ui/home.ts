@@ -113,10 +113,14 @@ const SignedInView = (props: SignedInViewProps): HomeView => {
 };
 
 export const getSignInUrl = (user: string, teamId: string) => {
-  let host = "http://localhost:3000";
-  if (process.env.NODE_ENV === "production") {
-    host = getBaseUrl();
+  let host = getBaseUrl();
+  const isDev = process.env.NODE_ENV === "development";
+
+  if (isDev) {
+    // we use localhost because we don't have a callback URL set up for NGROK
+    host = "http://localhost:3000";
   }
+
   return `${host}/sign-in?slack_user_id=${user}&team_id=${teamId}`;
 };
 
