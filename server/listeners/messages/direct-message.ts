@@ -28,11 +28,12 @@ export const directMessageCallback = async ({
   event,
   client,
   context,
+  body,
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
   const { channel, thread_ts, files } = event;
   const { session } = context;
-
+  const appId = body.api_app_id;
   // we only support message events from users. Subtypes can be seen here: https://docs.slack.dev/reference/events/message/
   if (message.subtype) {
     logger.warn("Direct message event received with subtype. Skipping...", {
@@ -61,7 +62,9 @@ export const directMessageCallback = async ({
       await client.chat.postEphemeral({
         channel,
         user: context.userId,
-        blocks: [SignInBlock({ user: context.userId, teamId: context.teamId })],
+        blocks: [
+          SignInBlock({ user: context.userId, teamId: context.teamId, appId }),
+        ],
         text: "Please sign in to continue.",
         thread_ts,
       });

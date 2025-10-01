@@ -27,6 +27,7 @@ export const teamSelectActionCallback = async ({
       return;
     }
     const session = context.session;
+    const appId = body.api_app_id;
 
     if (!session) {
       logger.error("Team select action failed: no session found for user", {
@@ -71,6 +72,7 @@ export const teamSelectActionCallback = async ({
       userId: slackUserId,
       teamId: slackTeamId,
       session,
+      appId,
     });
   } catch (error) {
     logger.error("Team select action callback failed:", error);

@@ -13,11 +13,12 @@
     "preview": "node .output/server/index.mjs",
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
-    "openapi": "node --experimental-strip-types scripts/openapi.mts"
+    "openapi": "node --experimental-strip-types scripts/openapi.mts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hey-api/openapi-ts": "^0.84.4",
-    "@slack/bolt": "^4.4.0",
+    "@slack/bolt": "4.4.0-aiAppsBeta.4",
     "@slack/web-api": "^7.10.0",
     "@vercel/sdk": "^1.11.4",
     "@vercel/slack-bolt": "1.0.2",

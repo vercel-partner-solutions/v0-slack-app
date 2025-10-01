@@ -271,9 +271,11 @@ export const updateTasksBlock = async ({
 export const SignInBlock = ({
   user,
   teamId,
+  appId,
 }: {
   user: string;
   teamId: string;
+  appId: string;
 }) => {
   return {
     type: "section",
@@ -287,7 +289,7 @@ export const SignInBlock = ({
         type: "plain_text",
         text: "Sign In",
       },
-      url: getSignInUrl(user, teamId),
+      url: getSignInUrl(user, teamId, appId),
       action_id: "sign-in-action",
       value: "sign-in",
     },

@@ -3,8 +3,7 @@ import { generateText } from "ai";
 import { app } from "~/app";
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
-import { SignInBlock } from "~/lib/slack/ui/blocks";
-import { createActionBlocks } from "~/lib/slack/ui/blocks";
+import { createActionBlocks, SignInBlock } from "~/lib/slack/ui/blocks";
 
 import {
   getMessagesFromEvent,
@@ -30,15 +29,17 @@ export const appMentionCallback = async ({
   context,
   say,
   logger,
+  body,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   const { channel, thread_ts, ts } = event;
   const { userId, teamId, session } = context;
+  const appId = body.api_app_id;
 
   try {
     if (!session) {
       await say({
         channel,
-        blocks: [SignInBlock({ user: userId, teamId })],
+        blocks: [SignInBlock({ user: userId, teamId, appId })],
         text: `Hi, <@${userId}>. Please sign in to continue.`,
         thread_ts: thread_ts || ts,
       });
@@ -124,7 +125,6 @@ export const appMentionCallback = async ({
       webUrl: chat.webUrl,
       chatId: chat.id,
     });
-    
     await say({
       blocks: [
         {
@@ -205,9 +205,12 @@ const createPromptFromMessages = async (messages: SlackUIMessage[]) => {
   });
 
   const { text: prompt } = await generateText({
-    model: "openai/gpt-4o-mini",
+    model: "gpt-4.1-nano",
     messages: relevantMessages,
     system: `You are a Prompt Engineering Expert specializing in improving user prompts to "v0", a Next.js and web development code assistant.
+
+    If the prompt is asking for a significant build, create a PRD document.
+    Keep it to a few paragraphs.
 
     TASK:
     When given a thread of messages, analyze and enhance it to create a more effective version while maintaining its core purpose. 

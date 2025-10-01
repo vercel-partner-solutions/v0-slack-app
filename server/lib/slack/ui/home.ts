@@ -112,7 +112,7 @@ export const SignedInView = (props: SignedInViewProps): HomeView => {
   };
 };
 
-export const getSignInUrl = (user: string, teamId: string) => {
+export const getSignInUrl = (user: string, teamId: string, appId: string) => {
   let host = getBaseUrl();
   const isDev =
     process.env.VERCEL_ENV === "development" ||
@@ -123,16 +123,17 @@ export const getSignInUrl = (user: string, teamId: string) => {
     host = "http://localhost:3000";
   }
 
-  return `${host}/sign-in?slack_user_id=${user}&team_id=${teamId}`;
+  return `${host}/sign-in?slack_user_id=${user}&team_id=${teamId}&app_id=${appId}`;
 };
 
 interface SignedOutViewProps {
   user: string;
   teamId: string;
+  appId: string;
 }
 
 const SignedOutView = (props: SignedOutViewProps): HomeView => {
-  const { user, teamId } = props;
+  const { user, teamId, appId } = props;
   return {
     type: "home",
     blocks: [
@@ -146,7 +147,7 @@ const SignedOutView = (props: SignedOutViewProps): HomeView => {
               text: "Sign in with Vercel",
             },
             accessibility_label: "Sign in with Vercel",
-            url: getSignInUrl(user, teamId),
+            url: getSignInUrl(user, teamId, appId),
             action_id: "sign-in-action",
           },
         ],
@@ -231,6 +232,7 @@ interface RenderAppHomeViewProps {
   userId: string;
   teamId: string;
   session: Session | null;
+  appId: string;
 }
 
 // Try to always update the app home view with this function, don't use client.views.publish directly.
@@ -238,7 +240,7 @@ interface RenderAppHomeViewProps {
 export const renderAppHomeView = async (
   props: RenderAppHomeViewProps,
 ): Promise<void> => {
-  const { userId, teamId, session } = props;
+  const { userId, teamId, session, appId } = props;
 
   try {
     let view: HomeView;
@@ -247,6 +249,7 @@ export const renderAppHomeView = async (
       view = SignedOutView({
         user: userId,
         teamId: teamId,
+        appId: appId,
       });
     } else {
       const [scopesResult, userResult] = await Promise.all([
@@ -300,93 +303,9 @@ export const renderAppHomeView = async (
       view: SignedOutView({
         user: userId,
         teamId: teamId,
+        appId: appId,
       }),
       user_id: userId,
     });
-  }
-};
-/**
- * Updates the app home view for a specific user after sign-in.
- * This function can be called from OAuth callbacks or other non-event contexts.
- * It uses the bot token directly to publish the view.
- */
-export const updateAppHomeViewAfterSignIn = async (
-  userId: string,
-  teamId: string,
-  session: Session,
-): Promise<void> => {
-  try {
-    app.logger.info("Updating app home view after sign-in:", {
-      userId,
-      teamId,
-      hasSession: !!session,
-    });
-
-    // Create the signed-in view
-    const [scopesResult, userResult] = await Promise.all([
-      userGetScopes({
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-        },
-      }),
-      userGet({
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-        },
-      }),
-    ]);
-
-    const { data: scopes, error: scopesError } = scopesResult;
-    const { data: userData, error: userGetError } = userResult;
-
-    if (userGetError || scopesError) {
-      app.logger.error(
-        "Failed to get user data for app home update:",
-        userGetError || scopesError,
-      );
-      throw userGetError || scopesError;
-    }
-
-    const view = SignedInView({
-      user: {
-        username: userData.name,
-        email: userData.email,
-        avatar: userData.avatar,
-      },
-      teams: scopes.data.map((team) => ({ id: team.id, name: team.name })),
-      selectedTeam:
-        session.selectedTeamId && session.selectedTeamName
-          ? {
-              id: session.selectedTeamId,
-              name: session.selectedTeamName,
-            }
-          : null,
-    });
-
-    // Use the bot token directly to publish the view
-    await app.client.views.publish({
-      view,
-      user_id: userId,
-    });
-
-    app.logger.info("Successfully updated app home view after sign-in");
-  } catch (error) {
-    app.logger.error("Failed to update app home view after sign-in:", error);
-
-    // Fallback: try to publish a simple signed-out view
-    try {
-      await app.client.views.publish({
-        view: SignedOutView({
-          user: userId,
-          teamId: teamId,
-        }),
-        user_id: userId,
-      });
-    } catch (fallbackError) {
-      app.logger.error(
-        "Failed to publish fallback app home view:",
-        fallbackError,
-      );
-    }
   }
 };

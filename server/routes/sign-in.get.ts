@@ -7,7 +7,7 @@ import {
 import { app } from "~/app";
 import { AUTHORIZE_PATH, REDIRECT_PATH, SCOPES } from "~/lib/auth/constants";
 import { getSession } from "~/lib/auth/session";
-import { redirectToSlackHome } from "~/lib/slack/utils";
+import { redirectToSlack } from "~/lib/slack/utils";
 
 const VERCEL_CLIENT_ID = process.env.VERCEL_CLIENT_ID;
 const VERCEL_CLIENT_SECRET = process.env.VERCEL_CLIENT_SECRET;
@@ -17,8 +17,9 @@ export default defineEventHandler(async (event): Promise<void> => {
   const query = getQuery(event);
   const slackUserId = query.slack_user_id as string;
   const slackTeamId = query.team_id as string;
+  const appId = query.app_id as string;
 
-  if (!slackUserId || !slackTeamId) {
+  if (!slackUserId || !slackTeamId || !appId) {
     return sendError(
       event,
       createError({
@@ -36,7 +37,7 @@ export default defineEventHandler(async (event): Promise<void> => {
       slackTeamId,
       session,
     });
-    return redirectToSlackHome(event, slackTeamId);
+    return redirectToSlack(event, slackTeamId, "home", appId);
   }
 
   const eventUrl = getRequestURL(event);
@@ -86,6 +87,7 @@ export default defineEventHandler(async (event): Promise<void> => {
   setCookie(event, "vercel_oauth_code_verifier", verifier, cookieOptions);
   setCookie(event, "slack_user_id", slackUserId, cookieOptions);
   setCookie(event, "slack_team_id", slackTeamId, cookieOptions);
+  setCookie(event, "app_id", appId, cookieOptions);
 
   return sendRedirect(event, url.toString(), 302);
 });
