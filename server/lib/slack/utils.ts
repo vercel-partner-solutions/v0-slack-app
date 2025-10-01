@@ -275,7 +275,7 @@ export const tryGetChatIdFromV0Url = (
 export const getMessagesFromEvent = async (
   event: AppMentionEvent | GenericMessageEvent,
 ): Promise<SlackUIMessage[]> => {
-  const { channel, thread_ts, text } = event;
+  const { channel, thread_ts, text, files } = event;
   let messages: SlackUIMessage[] = [];
   if (thread_ts) {
     messages = await getThreadMessagesAsModelMessages({
@@ -287,6 +287,10 @@ export const getMessagesFromEvent = async (
       {
         role: "user",
         content: text,
+        metadata: {
+          // @ts-expect-error - files is not typed correctly
+          files: files,
+        },
       },
     ];
   }

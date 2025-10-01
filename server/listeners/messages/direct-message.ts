@@ -35,7 +35,7 @@ export const directMessageCallback = async ({
   const { session } = context;
   const appId = body.api_app_id;
   // we only support message events from users. Subtypes can be seen here: https://docs.slack.dev/reference/events/message/
-  if (message.subtype) {
+  if (message.subtype && message.subtype !== "file_share") {
     logger.warn("Direct message event received with subtype. Skipping...", {
       subtype: message.subtype,
     });
@@ -197,7 +197,7 @@ const sendChatResponseToSlack = async (
 };
 
 const createAttachmentsArray = (
-  files?: { url_private?: string; id: string }[],
+  files?: { url_private?: string; id: string; mimetype?: string }[],
 ): { url: string }[] => {
   const attachmentsArray = [];
   for (const file of files) {
