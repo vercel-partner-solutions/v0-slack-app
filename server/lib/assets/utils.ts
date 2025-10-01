@@ -101,8 +101,7 @@ export function getBaseUrl() {
   const NGROK_URL = process.env.NGROK_URL;
   const NODE_ENV = process.env.NODE_ENV;
   const VERCEL_ENV = process.env.VERCEL_ENV;
-  const VERCEL_PROJECT_PRODUCTION_URL =
-    process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const VERCEL_PROD_URL = process.env.VERCEL_PROD_URL;
 
   const isDevelopment =
     VERCEL_ENV === "development" || NODE_ENV === "development";
@@ -125,11 +124,11 @@ export function getBaseUrl() {
     return `https://${VERCEL_URL}`;
   }
 
-  if (!VERCEL_PROJECT_PRODUCTION_URL) {
+  if (!VERCEL_PROD_URL) {
     throw new Error(
-      "VERCEL_PROJECT_PRODUCTION_URL environment variable is required for production environment",
+      "VERCEL_PROD_URL environment variable is required for production environment",
     );
   }
 
-  return `https://${VERCEL_PROJECT_PRODUCTION_URL}`;
+  return `https://${VERCEL_PROD_URL}`;
 }
