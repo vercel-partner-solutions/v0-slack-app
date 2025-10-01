@@ -2,6 +2,7 @@ import type {
   AllMiddlewareArgs,
   SlackCommandMiddlewareArgs,
 } from "@slack/bolt";
+import { getSignInUrl } from "~/lib/slack/ui/home";
 
 export const signInCommandCallback = async ({
   ack,
@@ -13,7 +14,6 @@ export const signInCommandCallback = async ({
     await ack();
     const user_id = payload.user_id;
     const team_id = payload.team_id;
-    const app_id = payload.api_app_id;
 
     if (!user_id) {
       throw new Error("User ID is required");
@@ -35,12 +35,12 @@ export const signInCommandCallback = async ({
               emoji: true,
             },
             value: "sign-in",
-            url: `http://localhost:3000/sign-in?slack_user_id=${user_id}&team_id=${team_id}&app_id=${app_id}`,
+            url: getSignInUrl(user_id, team_id),
             action_id: "sign-in-action",
           },
         },
       ],
-      text: `Hi <@${user_id}>, Click here to login to v0: http://localhost:3000/sign-in`,
+      text: `Hi <@${user_id}>, Click here to login to v0: ${getSignInUrl(user_id, team_id)}`,
     });
   } catch (error) {
     logger.error("Slash command handler failed:", error?.message);

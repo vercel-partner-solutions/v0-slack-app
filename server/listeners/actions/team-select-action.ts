@@ -4,8 +4,7 @@ import type {
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
 import { Vercel } from "@vercel/sdk";
-import { getSession } from "~/lib/auth/session";
-import { redis } from "~/lib/redis";
+import { getSession, updateSession } from "~/lib/auth/session";
 import { renderAppHomeView } from "~/lib/slack/ui/home";
 
 export const teamSelectActionCallback = async ({
@@ -66,7 +65,7 @@ export const teamSelectActionCallback = async ({
       selectedTeamName: selectedTeam.name,
     };
 
-    await redis.set(`session:${slackTeamId}:${slackUserId}`, updatedSession);
+    await updateSession(slackTeamId, slackUserId, updatedSession);
 
     await renderAppHomeView({
       userId: slackUserId,

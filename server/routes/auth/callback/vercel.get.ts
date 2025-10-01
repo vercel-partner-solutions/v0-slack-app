@@ -60,7 +60,12 @@ export default defineEventHandler(async (event) => {
       slackTeamId: storedSlackTeamId,
       token: tokens.accessToken(),
       refreshToken: tokens.refreshToken(),
-      expiresIn: tokens.accessTokenExpiresAt().getTime(),
+      expiresIn: Math.max(
+        0,
+        Math.floor(
+          (tokens.accessTokenExpiresAt().getTime() - Date.now()) / 1000,
+        ),
+      ),
     });
 
     const { renderAppHomeView } = await import("~/lib/slack/ui/home");
