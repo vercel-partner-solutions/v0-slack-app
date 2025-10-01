@@ -295,3 +295,7 @@ export const redirectToSlackHome = (
 ) => {
   return sendRedirect(event, `slack://app?team=${teamId}`, 302);
 };
+
+export const stripSlackUserTags = (text: string) => {
+  return text.replace(/<@[^>]+>\s*/g, "").trim();
+};
