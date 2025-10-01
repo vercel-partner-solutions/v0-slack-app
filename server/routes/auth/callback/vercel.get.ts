@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const session = await createSession({
+    await createSession({
       slackUserId: storedSlackUserId,
       slackTeamId: storedSlackTeamId,
       token: tokens.accessToken(),
@@ -67,14 +67,6 @@ export default defineEventHandler(async (event) => {
         ),
       ),
     });
-
-    const { renderAppHomeView } = await import("~/lib/slack/ui/home");
-    await renderAppHomeView({
-      userId: storedSlackUserId,
-      teamId: storedSlackTeamId,
-      session,
-    });
-    // Update the app home view to reflect the signed-in state
   } catch (error) {
     app.logger.error("Failed to create session:", error);
     return new Response(null, { status: 500 });
