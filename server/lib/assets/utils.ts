@@ -122,7 +122,7 @@ export function getBaseUrl() {
   }
 
   // Preview environment
-  if (VERCEL_TARGET_ENV === "preview" || VERCEL_ENV === "preview") {
+  if (VERCEL_TARGET_ENV === "preview") {
     if (!VERCEL_URL) {
       throw new Error(
         "VERCEL_URL environment variable is required for preview environment",
