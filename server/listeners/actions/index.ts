@@ -1,8 +1,10 @@
 import type { App } from "@slack/bolt";
+import { feedbackActionCallback } from "./feedback-action";
 import { openInV0ActionCallback } from "./open-in-v0-action";
 import { signInActionCallback } from "./sign-in-action";
 import { signOutActionCallback } from "./sign-out-action";
 import { teamSelectActionCallback } from "./team-select-action";
+import { removeActionCallback } from "./remove-action";
 import { viewDemoActionCallback } from "./view-demo-action";
 
 const register = (app: App) => {
@@ -11,6 +13,8 @@ const register = (app: App) => {
   app.action("sign-in-action", signInActionCallback);
   app.action("sign-out-action", signOutActionCallback);
   app.action("team-select-action", teamSelectActionCallback);
+  app.action("feedback", feedbackActionCallback);
+  app.action("remove", removeActionCallback);
 };
 
 export default { register };

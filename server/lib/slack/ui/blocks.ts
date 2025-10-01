@@ -62,6 +62,86 @@ export const FeedbackButtons = () => {
   };
 };
 
+export const createActionBlocks = ({
+  demoUrl,
+  webUrl,
+  chatId,
+}: {
+  demoUrl?: string;
+  webUrl?: string;
+  chatId: string;
+}) => {
+  const actionElements = [];
+
+  if (demoUrl) {
+    actionElements.push({
+      type: "button",
+      text: {
+        type: "plain_text",
+        text: "View Demo",
+        emoji: true,
+      },
+      value: demoUrl,
+      action_id: "view_demo_action",
+      url: demoUrl,
+    });
+  }
+
+  if (webUrl) {
+    actionElements.push({
+      type: "button",
+      text: {
+        type: "plain_text",
+        text: "Open in v0",
+        emoji: true,
+      },
+      value: webUrl,
+      action_id: "open_in_v0_action",
+      url: webUrl,
+    });
+  }
+
+  return [
+    {
+      type: "actions",
+      elements: actionElements,
+    },
+    {
+      type: "context_actions",
+      elements: [
+        {
+          type: "feedback_buttons",
+          action_id: "feedback",
+          positive_button: {
+            text: {
+              type: "plain_text",
+              text: "Good Response",
+            },
+            value: `positive_${chatId}`,
+          },
+          negative_button: {
+            text: {
+              type: "plain_text",
+              text: "Bad Response",
+            },
+            value: `negative_${chatId}`,
+          },
+        },
+        {
+          type: "icon_button",
+          action_id: "remove",
+          icon: "trash",
+          text: {
+            type: "plain_text",
+            text: "Remove",
+          },
+          value: chatId,
+        },
+      ],
+    },
+  ];
+};
+
 export const ThinkingBlock = ({ text }: { text: string }) => {
   return {
     type: "context",
