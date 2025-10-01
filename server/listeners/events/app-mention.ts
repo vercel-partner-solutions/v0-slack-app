@@ -5,6 +5,7 @@ import { type ChatDetail, v0 } from "v0-sdk";
 import { app } from "~/app";
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { createActionBlocks } from "~/lib/slack/ui/blocks";
 import {
   getMessagesFromEvent,
   isV0ChatUrl,
@@ -54,7 +55,12 @@ export const appMentionCallback = async ({
       await setExistingChat(thread_ts, chat.id);
     }
 
-    const summary = formatChatResponse(chat);
+    const summary = cleanV0Stream(chat.text);
+    const actionBlocks = createActionBlocks({
+      demoUrl: chat.latestVersion?.demoUrl,
+      webUrl: chat.webUrl,
+      chatId: chat.id,
+    });
 
     await say({
       blocks: [
@@ -62,6 +68,7 @@ export const appMentionCallback = async ({
           type: "markdown",
           text: summary,
         },
+        ...actionBlocks,
       ],
       text: summary,
       thread_ts: thread_ts || ts,
@@ -134,17 +141,6 @@ const resolveChatId = async (
 
   // Second priority: existing chat ID from thread
   return await getChatIDFromThread(thread_ts);
-};
-
-const formatChatResponse = (v0Chat: ChatDetail): string => {
-  let summary = cleanV0Stream(v0Chat.text);
-  const demoUrl = v0Chat.latestVersion?.demoUrl;
-
-  if (demoUrl) {
-    summary += `\n\n<${demoUrl}|View demo>`;
-  }
-
-  return summary;
 };
 
 const createAttachmentsArray = (

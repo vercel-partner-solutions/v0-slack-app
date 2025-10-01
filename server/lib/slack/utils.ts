@@ -1,4 +1,10 @@
-import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
+import type {
+  AllMiddlewareArgs,
+  BlockElementAction,
+  ButtonAction,
+  PlainTextInputAction,
+  SlackEventMiddlewareArgs,
+} from "@slack/bolt";
 import type {
   AppMentionEvent,
   ConversationsHistoryArguments,
@@ -288,3 +294,9 @@ export const getMessagesFromEvent = async (
   }
   return messages;
 };
+
+export function buttonActionOrPlainTextInputAction(
+  action: BlockElementAction,
+): action is ButtonAction | PlainTextInputAction {
+  return action.type === "button" || action.type === "plain_text_input";
+}
