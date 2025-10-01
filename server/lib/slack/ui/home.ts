@@ -10,7 +10,7 @@ interface SignedInViewProps {
   teams: { id: string; name: string }[];
 }
 
-const SignedInView = (props: SignedInViewProps): HomeView => {
+export const SignedInView = (props: SignedInViewProps): HomeView => {
   const { user, selectedTeam, teams } = props;
 
   return {
@@ -155,6 +155,78 @@ const SignedOutView = (props: SignedOutViewProps): HomeView => {
   };
 };
 
+export const SignedInLoadingView = (): HomeView => {
+  return {
+    type: "home",
+    blocks: [
+      // Header
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: "Settings",
+        },
+      },
+      {
+        type: "divider",
+      },
+
+      // Team Selection Section
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "*Team*",
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: "_Loading..._",
+          },
+        ],
+      },
+      {
+        type: "divider",
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "*Account*",
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: "_Loading..._",
+          },
+        ],
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: {
+              type: "plain_text",
+              text: "Sign Out",
+            },
+            accessibility_label: "Sign Out",
+            style: "danger",
+            action_id: "sign-out-action",
+            value: "sign-out",
+          },
+        ],
+      },
+    ],
+  };
+};
+
 interface RenderAppHomeViewProps {
   userId: string;
   teamId: string;
@@ -233,7 +305,6 @@ export const renderAppHomeView = async (
     });
   }
 };
-
 /**
  * Updates the app home view for a specific user after sign-in.
  * This function can be called from OAuth callbacks or other non-event contexts.
