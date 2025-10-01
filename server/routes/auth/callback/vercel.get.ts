@@ -3,6 +3,7 @@ import type { EventHandlerRequest, H3Event } from "h3";
 import { app } from "~/app";
 import { REDIRECT_PATH, TOKEN_PATH } from "~/lib/auth/constants";
 import { createSession } from "~/lib/auth/session";
+import { renderAppHomeView } from "~/lib/slack/ui/home";
 
 export default defineEventHandler(async (event) => {
   const { code, state, error, error_description } =
@@ -55,7 +56,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    await createSession({
+    const session = await createSession({
       slackUserId: storedSlackUserId,
       slackTeamId: storedSlackTeamId,
       token: tokens.accessToken(),
@@ -66,6 +67,14 @@ export default defineEventHandler(async (event) => {
           (tokens.accessTokenExpiresAt().getTime() - Date.now()) / 1000,
         ),
       ),
+    });
+    // If the app home view fails to render, log the error and continue
+    await renderAppHomeView({
+      userId: session.slackUserId,
+      teamId: session.slackTeamId,
+      session,
+    }).catch((error: Error) => {
+      app.logger.error("Failed to render app home view after sign-in:", error);
     });
   } catch (error) {
     app.logger.error("Failed to create session:", error);

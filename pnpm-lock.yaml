@@ -29,6 +29,9 @@ importers:
       arctic:
         specifier: ^3.7.0
         version: 3.7.0
+      h3:
+        specifier: ^1.15.4
+        version: 1.15.4
       zod:
         specifier: ^4.0.17
         version: 4.1.5

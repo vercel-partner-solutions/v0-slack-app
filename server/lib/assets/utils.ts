@@ -103,10 +103,16 @@ export function getBaseUrl() {
     NODE_ENV,
     VERCEL_TARGET_ENV,
     VERCEL_PROD_URL,
+    VERCEL_ENV,
   } = process.env;
 
-  // Development environment
-  if (VERCEL_TARGET_ENV === "development" || NODE_ENV === "development") {
+  // Development environment - check multiple indicators
+  const isDevelopment =
+    VERCEL_TARGET_ENV === "development" ||
+    NODE_ENV === "development" ||
+    VERCEL_ENV === "development";
+
+  if (isDevelopment) {
     if (!NGROK_URL) {
       throw new Error(
         "NGROK_URL environment variable is required for development environment",
@@ -116,7 +122,7 @@ export function getBaseUrl() {
   }
 
   // Preview environment
-  if (VERCEL_TARGET_ENV === "preview") {
+  if (VERCEL_TARGET_ENV === "preview" || VERCEL_ENV === "preview") {
     if (!VERCEL_URL) {
       throw new Error(
         "VERCEL_URL environment variable is required for preview environment",
@@ -126,7 +132,11 @@ export function getBaseUrl() {
   }
 
   // Production environment
-  if (VERCEL_TARGET_ENV === "production" || VERCEL_TARGET_ENV === "beta") {
+  if (
+    VERCEL_TARGET_ENV === "production" ||
+    VERCEL_TARGET_ENV === "beta" ||
+    VERCEL_ENV === "production"
+  ) {
     if (!VERCEL_PROD_URL) {
       throw new Error(
         "VERCEL_PROD_URL environment variable is required for production environment",
@@ -135,5 +145,18 @@ export function getBaseUrl() {
     return `https://${VERCEL_PROD_URL}`;
   }
 
-  throw new Error("Invalid environment");
+  // Fallback: if no environment is clearly defined, assume development
+  // This helps prevent the "Invalid environment" error during sign-out
+  if (!VERCEL_TARGET_ENV && !VERCEL_ENV && NODE_ENV !== "production") {
+    if (!NGROK_URL) {
+      throw new Error(
+        "NGROK_URL environment variable is required for development environment",
+      );
+    }
+    return NGROK_URL;
+  }
+
+  throw new Error(
+    `Invalid environment - VERCEL_TARGET_ENV: ${VERCEL_TARGET_ENV}, VERCEL_ENV: ${VERCEL_ENV}, NODE_ENV: ${NODE_ENV}`,
+  );
 }

@@ -23,6 +23,7 @@
     "@vercel/slack-bolt": "1.0.2",
     "ai": "latest",
     "arctic": "^3.7.0",
+    "h3": "^1.15.4",
     "zod": "^4.0.17"
   },
   "devDependencies": {
