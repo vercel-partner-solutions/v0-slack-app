@@ -19,6 +19,17 @@ export default defineEventHandler(async (event) => {
   const storedSlackUserId = getCookie(event, "slack_user_id") ?? null;
   const storedSlackTeamId = getCookie(event, "slack_team_id") ?? null;
 
+  // Log cookie values for debugging
+  app.logger.info("OAuth callback cookie values:", {
+    storedSlackUserId,
+    storedSlackTeamId,
+    storedState: storedState ? "present" : "missing",
+    storedVerifier: storedVerifier ? "present" : "missing",
+    storedRedirectTo,
+    slackUserIdType: typeof storedSlackUserId,
+    slackUserIdLength: storedSlackUserId?.length,
+  });
+
   if (
     !isValidOAuthCallbackParams(
       code,
@@ -69,12 +80,24 @@ export default defineEventHandler(async (event) => {
       ),
     });
     // If the app home view fails to render, log the error and continue
+    app.logger.info("About to render app home view with session data:", {
+      slackUserId: session.slackUserId,
+      slackTeamId: session.slackTeamId,
+      userIdType: typeof session.slackUserId,
+      userIdLength: session.slackUserId?.length,
+    });
+
     await renderAppHomeView({
       userId: session.slackUserId,
       teamId: session.slackTeamId,
       session,
     }).catch((error: Error) => {
-      app.logger.error("Failed to render app home view after sign-in:", error);
+      app.logger.error("Failed to render app home view after sign-in:", {
+        error: error.message,
+        stack: error.stack,
+        slackUserId: session.slackUserId,
+        slackTeamId: session.slackTeamId,
+      });
     });
   } catch (error) {
     app.logger.error("Failed to create session:", error);

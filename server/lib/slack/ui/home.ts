@@ -167,6 +167,28 @@ export const renderAppHomeView = async (
   props: RenderAppHomeViewProps,
 ): Promise<void> => {
   const { userId, teamId, session } = props;
+
+  // Validate user ID format
+  if (!userId || typeof userId !== "string" || userId.trim() === "") {
+    app.logger.error("Invalid user ID provided to renderAppHomeView:", {
+      userId,
+      userIdType: typeof userId,
+      teamId,
+      hasSession: !!session,
+    });
+    throw new Error(`Invalid user ID: ${userId}`);
+  }
+
+  // Check if user ID looks like a valid Slack user ID (starts with U and is 9+ characters)
+  if (!userId.match(/^U[A-Z0-9]{8,}$/)) {
+    app.logger.error("User ID does not match Slack user ID format:", {
+      userId,
+      teamId,
+      hasSession: !!session,
+    });
+    throw new Error(`Invalid Slack user ID format: ${userId}`);
+  }
+
   try {
     let view: HomeView;
 
@@ -215,6 +237,12 @@ export const renderAppHomeView = async (
             : null,
       });
     }
+
+    app.logger.info("Publishing app home view to Slack:", {
+      userId,
+      teamId,
+      viewType: view.type,
+    });
 
     await app.client.views.publish({
       view,
