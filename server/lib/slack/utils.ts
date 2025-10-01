@@ -89,15 +89,14 @@ const getThreadMessages = async (
 };
 
 export const getThreadMessagesAsModelMessages = async (
-  args: ConversationsRepliesArguments & { botId: string },
+  args: ConversationsRepliesArguments,
 ): Promise<SlackUIMessage[]> => {
-  const { botId } = args;
   const messages = await getThreadMessages(args);
 
   return messages.map((message) => {
     const { bot_id, text } = message;
     return {
-      role: bot_id === botId ? "assistant" : "user",
+      role: bot_id ? "assistant" : "user",
       content: text,
       metadata: {
         ...message,
@@ -270,13 +269,12 @@ export const tryGetChatIdFromV0Url = (
 export const getMessagesFromEvent = async (
   event: AppMentionEvent | GenericMessageEvent,
 ): Promise<SlackUIMessage[]> => {
-  const { channel, thread_ts, bot_id, text } = event;
+  const { channel, thread_ts, text } = event;
   let messages: SlackUIMessage[] = [];
   if (thread_ts) {
     messages = await getThreadMessagesAsModelMessages({
       channel,
       ts: thread_ts,
-      botId: bot_id,
     });
   } else {
     messages = [

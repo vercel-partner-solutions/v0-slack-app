@@ -7,7 +7,6 @@ import { SignInBlock } from "~/lib/slack/ui/blocks";
 import {
   getMessagesFromEvent,
   isV0ChatUrl,
-  MessageState,
   type SlackUIMessage,
   stripSlackUserTags,
   tryGetChatIdFromV0Url,
@@ -43,6 +42,12 @@ export const appMentionCallback = async ({
       });
       return;
     }
+
+    await updateAgentStatus({
+      channel,
+      thread_ts: thread_ts || ts,
+      status: "is thinking...",
+    });
 
     const messages = await getMessagesFromEvent(event);
 
@@ -123,11 +128,6 @@ export const appMentionCallback = async ({
       channel,
       thread_ts: thread_ts || ts,
     });
-
-    await MessageState.setCompleted({
-      channel,
-      timestamp: ts,
-    });
   } catch (error) {
     logger.error("Direct message handler failed:", error);
 
@@ -138,11 +138,6 @@ export const appMentionCallback = async ({
       text: errorMessage,
       thread_ts: thread_ts || ts,
     });
-
-    MessageState.setError({
-      channel,
-      timestamp: ts,
-    }).catch((error) => logger.warn("Failed to set error reaction:", error));
   } finally {
     // clear agent status
     if (thread_ts) {
@@ -155,6 +150,18 @@ export const appMentionCallback = async ({
   }
 };
 
+const getMessagesSinceLastAssistantMessage = (
+  messages: SlackUIMessage[],
+): SlackUIMessage[] => {
+  let lastAssistantIndex = -1;
+  messages.forEach((message, index) => {
+    if (message.role === "assistant") {
+      lastAssistantIndex = index;
+    }
+  });
+  return messages.slice(lastAssistantIndex + 1);
+};
+
 const createPromptFromMessages = async (messages: SlackUIMessage[]) => {
   if (messages.length === 1) {
     const message = messages[0];
@@ -164,10 +171,33 @@ const createPromptFromMessages = async (messages: SlackUIMessage[]) => {
     );
     return message.content as string;
   }
-  app.logger.info("Creating prompt from messages", { messages });
+
+  const relevantMessages = getMessagesSinceLastAssistantMessage(messages);
+  app.logger.info("Relevant messages: ", relevantMessages);
+
+  if (relevantMessages.length === 1) {
+    const message = relevantMessages[0];
+    app.logger.info(
+      "Skipping prompt generation for single message: ",
+      message.content,
+    );
+    return message.content as string;
+  }
+
+  // If no relevant messages after assistant, return the last message content
+  if (relevantMessages.length === 0) {
+    throw new Error(`No relevant messages found in thread`);
+  }
+
+  app.logger.info("Creating prompt from messages", {
+    totalMessages: messages.length,
+    relevantMessages: relevantMessages.length,
+    messages: relevantMessages,
+  });
+
   const { text: prompt } = await generateText({
     model: "openai/gpt-4o-mini",
-    messages,
+    messages: relevantMessages,
     system: `You are a Prompt Engineering Expert specializing in improving user prompts to "v0", a Next.js and web development code assistant.
 
     TASK:
