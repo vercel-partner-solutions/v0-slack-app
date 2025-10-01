@@ -1,7 +1,7 @@
 import type { HomeView } from "@slack/web-api";
 import { app } from "~/app";
 import { getBaseUrl } from "~/lib/assets/utils";
-import { deleteSession, getSession } from "~/lib/auth/session";
+import { deleteSession, type Session } from "~/lib/auth/session";
 import { userGet, userGetScopes } from "~/lib/v0/client";
 
 interface SignedInViewProps {
@@ -152,6 +152,7 @@ const SignedOutView = (props: SignedOutViewProps): HomeView => {
 interface RenderAppHomeViewProps {
   userId: string;
   teamId: string;
+  session: Session;
 }
 
 // Try to always update the app home view with this function, don't use client.views.publish directly.
@@ -159,9 +160,8 @@ interface RenderAppHomeViewProps {
 export const renderAppHomeView = async (
   props: RenderAppHomeViewProps,
 ): Promise<void> => {
-  const { userId, teamId } = props;
+  const { userId, teamId, session } = props;
   try {
-    const session = await getSession(teamId, userId);
     let view: HomeView;
 
     if (!session) {
@@ -170,17 +170,21 @@ export const renderAppHomeView = async (
         teamId: teamId,
       });
     } else {
-      const { data: scopes, error: scopesError } = await userGetScopes({
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-        },
-      });
+      const [scopesResult, userResult] = await Promise.all([
+        userGetScopes({
+          headers: {
+            Authorization: `Bearer ${session.token}`,
+          },
+        }),
+        userGet({
+          headers: {
+            Authorization: `Bearer ${session.token}`,
+          },
+        }),
+      ]);
 
-      const { data: userData, error: userGetError } = await userGet({
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-        },
-      });
+      const { data: scopes, error: scopesError } = scopesResult;
+      const { data: userData, error: userGetError } = userResult;
 
       if (userGetError || scopesError) {
         app.logger.error("Failed to get user data:", userGetError);
