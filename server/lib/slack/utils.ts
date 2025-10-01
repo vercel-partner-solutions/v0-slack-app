@@ -295,15 +295,18 @@ export const getMessagesFromEvent = async (
 
 export const redirectToSlack = (
   event: H3Event<EventHandlerRequest>,
-  teamId: string,
-  tab: "home" | "messages" | "about" = "home",
-  appId: string,
+  teamId?: string,
+  tab?: "home" | "messages" | "about",
+  appId?: string,
 ) => {
-  return sendRedirect(
-    event,
-    `slack://app?team=${teamId}&id=${appId}&tab=${tab}`,
-    302,
-  );
+  const params = [
+    teamId ? `team=${encodeURIComponent(teamId)}` : null,
+    appId ? `id=${encodeURIComponent(appId)}` : null,
+    tab ? `tab=${encodeURIComponent(tab)}` : null,
+  ]
+    .filter(Boolean)
+    .join("&");
+  return sendRedirect(event, `slack://app${params ? `?${params}` : ""}`, 302);
 };
 
 export const stripSlackUserTags = (text: string) => {
