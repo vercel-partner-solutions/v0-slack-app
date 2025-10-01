@@ -1,5 +1,4 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
-import type { AppMentionEvent } from "@slack/web-api";
 import { generateText } from "ai";
 import { app } from "~/app";
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
@@ -273,23 +272,4 @@ const createAttachmentsArray = (
     }
   }
   return attachments;
-};
-
-const updateAppMentionStatus = (event: AppMentionEvent) => {
-  const { channel, thread_ts, ts } = event;
-  try {
-    if (thread_ts) {
-      updateAgentStatus({
-        channel,
-        thread_ts,
-        status: "is thinking...",
-      });
-    }
-    MessageState.setProcessing({
-      channel,
-      timestamp: ts,
-    });
-  } catch (error) {
-    app.logger.error("Failed to update app mention status:", error);
-  }
 };
