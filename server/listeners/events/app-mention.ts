@@ -3,7 +3,6 @@ import type { AppMentionEvent } from "@slack/web-api";
 import { generateText } from "ai";
 import { app } from "~/app";
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
-import { getSession } from "~/lib/auth/session";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import { SignInBlock } from "~/lib/slack/ui/blocks";
 import {
@@ -32,11 +31,9 @@ export const appMentionCallback = async ({
   logger,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   const { channel, thread_ts, ts } = event;
-  const { userId, teamId } = context;
+  const { userId, teamId, session } = context;
 
   try {
-    const session = await getSession(teamId, userId);
-
     if (!session) {
       await say({
         channel,
