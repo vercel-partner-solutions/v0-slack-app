@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    await createSession({
+    const session = await createSession({
       slackUserId: storedSlackUserId,
       slackTeamId: storedSlackTeamId,
       token: tokens.accessToken(),
@@ -72,6 +72,7 @@ export default defineEventHandler(async (event) => {
     await renderAppHomeView({
       userId: storedSlackUserId,
       teamId: storedSlackTeamId,
+      session,
     });
     // Update the app home view to reflect the signed-in state
   } catch (error) {

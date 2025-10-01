@@ -4,7 +4,7 @@ import type {
   SlackActionMiddlewareArgs,
 } from "@slack/bolt";
 import { Vercel } from "@vercel/sdk";
-import { getSession, updateSession } from "~/lib/auth/session";
+import { updateSession } from "~/lib/auth/session";
 import { renderAppHomeView } from "~/lib/slack/ui/home";
 
 export const teamSelectActionCallback = async ({
@@ -26,7 +26,7 @@ export const teamSelectActionCallback = async ({
       logger.error("Team select action failed: no user ID found");
       return;
     }
-    const session = await getSession(slackTeamId, slackUserId);
+    const session = context.session;
 
     if (!session) {
       logger.error("Team select action failed: no session found for user", {
@@ -70,6 +70,7 @@ export const teamSelectActionCallback = async ({
     await renderAppHomeView({
       userId: slackUserId,
       teamId: slackTeamId,
+      session,
     });
   } catch (error) {
     logger.error("Team select action callback failed:", error);

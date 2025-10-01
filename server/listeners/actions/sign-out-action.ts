@@ -10,7 +10,7 @@ export const signOutActionCallback = async ({
   logger,
   context,
 }: AllMiddlewareArgs & SlackActionMiddlewareArgs<BlockAction>) => {
-  const { userId, teamId } = context;
+  const { userId, teamId, session } = context;
 
   try {
     await ack();
@@ -24,6 +24,7 @@ export const signOutActionCallback = async ({
       await renderAppHomeView({
         userId,
         teamId,
+        session,
       });
     } catch (viewError) {
       logger.error("Fallback view update also failed:", viewError);

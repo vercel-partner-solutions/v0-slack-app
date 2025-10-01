@@ -39,6 +39,7 @@ export default defineEventHandler(async (event) => {
     await renderAppHomeView({
       userId: slackUserId,
       teamId: slackTeamId,
+      session: null,
     });
   } catch (error) {
     app.logger.error("Failed to update app home view after sign-out:", error);

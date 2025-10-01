@@ -7,6 +7,7 @@ const authEventsMatcher = [
   "message",
   "block_actions",
   "slash_command",
+  "app_home_opened",
 ] as const;
 
 type AuthEventType = (typeof authEventsMatcher)[number];
@@ -29,7 +30,7 @@ export const authMiddleware = async ({
 
   if (!authEventsMatcher.includes(eventType as AuthEventType)) {
     // Skip auth for events that don't need it
-    logger.info("Skipping auth middlewarefor event type", { eventType });
+    logger.info("Skipping auth middleware for event type", { eventType });
     await next();
     return;
   }

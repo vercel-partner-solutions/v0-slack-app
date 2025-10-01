@@ -9,7 +9,7 @@ export const appHomeOpenedCallback = async ({
   // Ignore the `app_home_opened` event for anything but the Home tab
   if (event.tab !== "home") return;
 
-  const { userId, teamId } = context;
+  const { userId, teamId, session } = context;
 
   if (!userId || !teamId) {
     logger.error(
@@ -25,5 +25,6 @@ export const appHomeOpenedCallback = async ({
   await renderAppHomeView({
     userId,
     teamId,
+    session,
   });
 };

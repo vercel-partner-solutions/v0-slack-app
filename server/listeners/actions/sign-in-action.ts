@@ -12,11 +12,12 @@ export const signInActionCallback = async ({
 }: AllMiddlewareArgs & SlackActionMiddlewareArgs<BlockAction>) => {
   try {
     await ack();
-    const { userId, teamId } = context;
+    const { userId, teamId, session } = context;
 
     await renderAppHomeView({
       userId,
       teamId,
+      session,
     });
   } catch (error) {
     logger.error("Login action callback failed:", error);

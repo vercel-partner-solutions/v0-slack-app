@@ -6,7 +6,6 @@ import type {
 import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
 
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
-import { getSession } from "~/lib/auth/session";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import { SignInBlock } from "~/lib/slack/ui/blocks";
 import { updateAgentStatus } from "~/lib/slack/utils";
@@ -32,6 +31,7 @@ export const directMessageCallback = async ({
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
   const { channel, thread_ts, files } = event;
+  const { session } = context;
 
   // we only support message events from users. Subtypes can be seen here: https://docs.slack.dev/reference/events/message/
   if (message.subtype) {
@@ -56,8 +56,6 @@ export const directMessageCallback = async ({
       thread_ts,
       status: "is thinking...",
     }).catch((error) => logger.warn("Failed to update agent status:", error));
-
-    const session = await getSession(context.teamId, context.userId);
 
     if (!session) {
       await client.chat.postEphemeral({
