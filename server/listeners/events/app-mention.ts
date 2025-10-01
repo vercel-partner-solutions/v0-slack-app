@@ -9,6 +9,7 @@ import {
   isV0ChatUrl,
   MessageState,
   type SlackUIMessage,
+  stripSlackUserTags,
   tryGetChatIdFromV0Url,
   updateAgentStatus,
 } from "~/lib/slack/utils";
@@ -51,15 +52,19 @@ export const appMentionCallback = async ({
       resolveChatId(messages, thread_ts),
     ]);
 
+    const cleanPrompt = stripSlackUserTags(prompt);
     let chat: ChatDetail;
     if (chatId) {
+      logger.info(
+        `Sending message to existing chat (${chatId}) with prompt: ${cleanPrompt}`,
+      );
       const { data: chatData, error: sendMessageError } =
         await chatsSendMessage({
           path: {
             chatId,
           },
           body: {
-            message: prompt,
+            message: cleanPrompt,
             responseMode: "sync",
             attachments,
           },
@@ -79,10 +84,10 @@ export const appMentionCallback = async ({
       chat = chatData;
       await setExistingChat(thread_ts, chat.id);
     } else {
-      logger.info("Creating new chat");
+      logger.info(`Creating new chat with prompt: ${cleanPrompt}`);
       const { data: chatData, error: createChatError } = await chatsCreate({
         body: {
-          message: event.text,
+          message: cleanPrompt,
           responseMode: "sync",
           attachments,
           system: SYSTEM_PROMPT,
@@ -101,8 +106,9 @@ export const appMentionCallback = async ({
         });
       }
 
+      // use ts here because it's a parent level message
+      await setExistingChat(ts, chatData.id);
       chat = chatData;
-      await setExistingChat(thread_ts, chat.id);
     }
 
     const summary = formatChatResponse(chat);
@@ -150,6 +156,14 @@ export const appMentionCallback = async ({
 };
 
 const createPromptFromMessages = async (messages: SlackUIMessage[]) => {
+  if (messages.length === 1) {
+    const message = messages[0];
+    app.logger.info(
+      "Skipping prompt generation for single message: ",
+      message.content,
+    );
+    return message.content as string;
+  }
   app.logger.info("Creating prompt from messages", { messages });
   const { text: prompt } = await generateText({
     model: "openai/gpt-4o-mini",
@@ -159,7 +173,8 @@ const createPromptFromMessages = async (messages: SlackUIMessage[]) => {
     TASK:
     When given a thread of messages, analyze and enhance it to create a more effective version while maintaining its core purpose. 
     The requests are being made to "v0", Vercel's AI assistant that specializes in writing code. The messages are in order
-    from oldest to newest. Newer decisions are more important than older decisions.
+    from oldest to newest. Newer decisions are more important than older decisions. If the messages are asking a question, don't
+    answer the question, just enhance the prompt.
 
     ANALYSIS PROCESS:
 
