@@ -40,7 +40,7 @@ export const onlyChannelType =
     next,
   }: SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs) => {
     if (event.channel_type === type) {
-      await next();
+      next();
     }
   };
 
@@ -244,13 +244,11 @@ export const MessageState = {
   },
 };
 
+export const V0_URL_REGEX = /https:\/\/v0\.app\/chat\/[a-zA-Z0-9_-]+/g;
 export const isV0ChatUrl = (url: URL | string): boolean => {
   // Convert URL object to string
   const urlString = url instanceof URL ? url.toString() : url;
-
-  // Validate that this is a v0.app chat URL - allows additional paths and query params
-  // biome-ignore lint/complexity/noUselessEscapeInRegex: <I think it's wrong>
-  const v0ChatUrlRegex = /^https:\/\/v0\.app\/chat\/[^\/]+-[a-zA-Z0-9]+/;
+  const v0ChatUrlRegex = V0_URL_REGEX;
   return v0ChatUrlRegex.test(urlString);
 };
 
