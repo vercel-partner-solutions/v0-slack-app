@@ -98,7 +98,8 @@ export function validateSignedUrl(
 
 export function proxySlackUrl(slackFileUrl: string): string {
   const encoded = Buffer.from(slackFileUrl).toString('base64url');
-  return `${getBaseUrl()}/assets/${encoded}`;
+  const secret = process.env.ASSET_SIGNING_SECRET;
+  return `${getBaseUrl()}/assets/${encoded}?key=${secret}`;
 }
 
 export function getBaseUrl() {
