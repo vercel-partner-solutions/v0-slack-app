@@ -96,6 +96,12 @@ export function validateSignedUrl(
   };
 }
 
+export function proxySlackUrl(slackFileUrl: string): string {
+  const proxyUrl = `${getBaseUrl()}/assets/${encodeURIComponent(slackFileUrl)}`;
+  console.log("proxyUrl", proxyUrl);
+  return proxyUrl;
+}
+
 export function getBaseUrl() {
   const {
     VERCEL_URL,

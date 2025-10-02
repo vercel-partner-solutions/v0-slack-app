@@ -1,7 +1,7 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import { generateText } from "ai";
 import { app } from "~/app";
-import { generateSignedAssetUrl } from "~/lib/assets/utils";
+import { proxySlackUrl } from "~/lib/assets/utils";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
 import { createActionBlocks, SignInBlock } from "~/lib/slack/ui/blocks";
 
@@ -308,12 +308,9 @@ const createAttachmentsArray = (
   const attachments = [];
   for (const file of files) {
     if (file?.url_private) {
-      const signedUrl = generateSignedAssetUrl(file.url_private, {
-        expiryHours: 24,
-        chatId: file.id,
-      });
+      const proxyUrl = proxySlackUrl(file.url_private);
       attachments.push({
-        url: signedUrl,
+        url: proxyUrl,
       });
     }
   }
