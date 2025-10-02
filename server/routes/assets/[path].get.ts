@@ -1,71 +1,23 @@
-import { app } from "~/app";
-import { validateSignedUrl } from "~/lib/assets/utils";
-
 export default defineEventHandler(async (event) => {
-  const encodedUrl = getRouterParam(event, "path");
+  const encoded = getRouterParam(event, "path");
+  const { key } = getQuery(event);
 
-  if (!encodedUrl) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: "Asset URL is required",
-    });
+  if (!encoded) {
+    throw createError({ statusCode: 400, message: "Missing file path" });
+  }
+  
+  // Verify the secret key
+  if (key !== process.env.ASSET_SIGNING_SECRET) {
+    throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
-  console.log("Received request for asset", encodedUrl);
-  try {
-    // Decode the URL that was passed as the path parameter
-    const fileUrl = decodeURIComponent(encodedUrl);
+  // Decode base64url to get original Slack URL
+  const slackUrl = Buffer.from(encoded, "base64url").toString("utf-8");
 
-    // Validate that this is a Slack file URL
-    if (!fileUrl.match(/^https:\/\/(files\.)?slack\.com\//)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: "Invalid Slack file URL",
-      });
-    }
-
-    // Extract query parameters for signature validation
-    const query = getQuery(event);
-    const signature = query.sig as string;
-    const expiresAt = query.exp as string;
-    const chatId = query.chat as string;
-
-    console.log("Query parameters for asset", query);
-
-    // Validate the signed URL
-    const validation = validateSignedUrl(fileUrl, signature, expiresAt, chatId);
-
-    if (!validation.isValid) {
-      app.logger.warn(`Invalid asset request: ${validation.error}`, {
-        fileUrl,
-        clientIp: getRequestIP(event),
-        userAgent: getRequestHeader(event, "user-agent"),
-        host: getRequestHost(event),
-      });
-
-      throw createError({
-        statusCode: 403,
-        statusMessage: validation.error || "Access denied",
-      });
-    }
-
-    console.log("Sending proxy for fileUrl", fileUrl);
-    // Use sendProxy for reliable streaming with authentication
-    return sendProxy(event, fileUrl, {
-      headers: {
-        Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-      },
-    });
-  } catch (error) {
-    app.logger.error("Error fetching Slack asset:", error);
-
-    if (error.statusCode) {
-      throw error;
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Failed to fetch asset from Slack",
-    });
-  }
+  // Proxy to Slack with bot token
+  return sendProxy(event, slackUrl, {
+    headers: {
+      Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+    },
+  });
 });

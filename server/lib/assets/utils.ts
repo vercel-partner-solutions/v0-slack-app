@@ -96,6 +96,12 @@ export function validateSignedUrl(
   };
 }
 
+export function proxySlackUrl(slackFileUrl: string): string {
+  const encoded = Buffer.from(slackFileUrl).toString('base64url');
+  const secret = process.env.ASSET_SIGNING_SECRET;
+  return `${getBaseUrl()}/assets/${encoded}?key=${secret}`;
+}
+
 export function getBaseUrl() {
   const {
     VERCEL_URL,
