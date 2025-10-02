@@ -83,7 +83,7 @@ export const directMessageMiddleware = async ({
     return;
   }
 
-  if (event.subtype) {
+  if (event.subtype && event.subtype !== "file_share") {
     next();
     return;
   }
