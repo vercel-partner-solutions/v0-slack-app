@@ -29,9 +29,7 @@ export const authMiddleware = async ({
     (args as any).body?.event?.type;
 
   if (!authEventsMatcher.includes(eventType as AuthEventType)) {
-    // Skip auth for events that don't need it
-    logger.info("Skipping auth middleware for event type", { eventType });
-    await next();
+    next();
     return;
   }
 
@@ -39,10 +37,17 @@ export const authMiddleware = async ({
   const isBotMessage =
     (args as any).event?.bot_id ||
     (args as any).event?.subtype === "bot_message";
+
   if (isBotMessage) {
-    logger.info("Skipping auth middleware for bot message", { eventType });
-    await next();
+    next();
     return;
+  }
+
+  if (eventType === "message") {
+    if ((args as any).event?.channel_type !== "im") {
+      next();
+      return;
+    }
   }
 
   logger.info("Running auth middleware for event type", { eventType });
@@ -61,5 +66,5 @@ export const authMiddleware = async ({
 
   // Attach session to context
   context.session = session;
-  await next();
+  next();
 };

@@ -6,14 +6,10 @@ import type {
 import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
 
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
-import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { setExistingChat } from "~/lib/redis";
 import { SignInBlock } from "~/lib/slack/ui/blocks";
 import { updateAgentStatus } from "~/lib/slack/utils";
-import {
-  type ChatDetail,
-  chatsCreate,
-  chatsSendMessage,
-} from "~/lib/v0/client";
+import { chatsCreate, chatsSendMessage } from "~/lib/v0/client";
 import { cleanV0Stream } from "~/lib/v0/utils";
 
 export const DEFAULT_ERROR_MESSAGE =
@@ -32,8 +28,9 @@ export const directMessageCallback = async ({
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
   const { channel, thread_ts, files } = event;
-  const { session } = context;
+  const { session, isNewChat, chatId } = context;
   const appId = body.api_app_id;
+
   // we only support message events from users. Subtypes can be seen here: https://docs.slack.dev/reference/events/message/
   if (message.subtype && message.subtype !== "file_share") {
     logger.warn("Direct message event received with subtype. Skipping...", {
@@ -71,59 +68,47 @@ export const directMessageCallback = async ({
       return;
     }
 
-    let chat: ChatDetail;
-
-    const chatId = await getChatIDFromThread(thread_ts);
     const attachments = createAttachmentsArray(files || []);
 
-    if (chatId) {
-      const { data: chatData, error } = await chatsSendMessage({
-        path: {
-          chatId,
-        },
-        body: {
-          message: event.text,
-          responseMode: "sync",
-          attachments,
-        },
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-          "X-Scope": session.selectedTeamId,
-          "x-v0-client": "slack",
-        },
-      });
+    const body = {
+      message: event.text,
+      responseMode: "sync" as const,
+      attachments,
+      system: SYSTEM_PROMPT,
+    };
+    const headers = {
+      Authorization: `Bearer ${session.token}`,
+      "x-scope": session.selectedTeamId,
+      "x-v0-client": "slack",
+    };
+    logger.info("Creating chat or sending message to chat", {
+      isNewChat,
+      chatId,
+    });
+    const { data, error } = isNewChat
+      ? await chatsCreate({
+          body,
+          headers,
+        })
+      : await chatsSendMessage({
+          path: {
+            chatId,
+          },
+          body,
+          headers,
+        });
 
-      if (error) {
-        throw new Error(error.error.message, { cause: error.error.type });
-      }
-
-      chat = chatData;
-    } else {
-      const { data: chatData, error } = await chatsCreate({
-        body: {
-          message: event.text,
-          responseMode: "sync",
-          attachments,
-          system: SYSTEM_PROMPT,
-        },
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-          "x-scope": session.selectedTeamId,
-          "x-v0-client": "slack",
-        },
-      });
-
-      if (error) {
-        throw new Error(error.error.message, { cause: error.error.type });
-      }
-
-      chat = chatData;
+    if (error) {
+      throw new Error(error.error.message, { cause: error.error.type });
     }
-    await setExistingChat(thread_ts, chat.id);
 
-    const cleanedChat = cleanV0Stream(chat.text);
-    const webUrl = chat.webUrl || `https://v0.dev/chat/${chat.id}`;
-    const demoUrl = chat.latestVersion?.demoUrl;
+    if (isNewChat) {
+      await setExistingChat(thread_ts, data.id);
+    }
+
+    const cleanedChat = cleanV0Stream(data.text);
+    const webUrl = data.webUrl || `https://v0.dev/chat/${data.id}`;
+    const demoUrl = data.latestVersion?.demoUrl;
 
     await sendChatResponseToSlack(say, cleanedChat, thread_ts, webUrl, demoUrl);
   } catch (error: unknown) {
