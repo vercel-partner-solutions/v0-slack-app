@@ -1,20 +1,17 @@
 export default defineEventHandler(async (event) => {
-  const path = getRouterParam(event, "path");
-  console.log("path", path);
+  const encoded = getRouterParam(event, "path");
 
-  if (!path) {
+  if (!encoded) {
     throw createError({ statusCode: 400, message: "Missing file path" });
   }
 
-  console.log("process.env.SLACK_BOT_TOKEN", process.env.SLACK_BOT_TOKEN);
+  // Decode base64url to get original Slack URL
+  const slackUrl = Buffer.from(encoded, "base64url").toString("utf-8");
+
   // Proxy to Slack with bot token
-  return sendProxy(event, path, {
+  return sendProxy(event, slackUrl, {
     headers: {
       Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-    },
-    onResponse: (event, response) => {
-      console.log("event", event);
-      console.log("response", response);
     },
   });
 });
