@@ -63,19 +63,12 @@ export const directMessageCallback = async ({
       thread_ts,
       status: "is thinking...",
     });
-    updateAgentStatus({
+
+    await updateAgentStatus({
       channel,
       thread_ts,
       status: "is thinking...",
-    })
-      .then(() => {
-        app.logger.info("Agent status updated", {
-          channel,
-          thread_ts,
-          status: "is thinking...",
-        });
-      })
-      .catch((error) => logger.warn("Failed to update agent status:", error));
+    }).catch((error) => logger.warn("Failed to update agent status:", error));
 
     if (!session) {
       app.logger.info("Posting ephemeral message to sign in", {
@@ -102,6 +95,14 @@ export const directMessageCallback = async ({
       channel,
     });
 
+    if (attachments.length > 0) {
+      await updateAgentStatus({
+        channel,
+        thread_ts,
+        status: "is reading attachments...",
+      }).catch((error) => logger.warn("Failed to update agent status:", error));
+    }
+
     const body = {
       message: event.text,
       responseMode: "sync" as const,
@@ -117,6 +118,12 @@ export const directMessageCallback = async ({
       isNewChat,
       chatId,
     });
+    await updateAgentStatus({
+      channel,
+      thread_ts,
+      status: isNewChat ? "is creating a new chat..." : "is sending message...",
+    }).catch((error) => logger.warn("Failed to update agent status:", error));
+
     const { data, error } = isNewChat
       ? await chatsCreate({
           body,
@@ -134,6 +141,12 @@ export const directMessageCallback = async ({
       throw new Error(error.error.message, { cause: error.error.type });
     }
 
+    await updateAgentStatus({
+      channel,
+      thread_ts,
+      status: "is saving chat...",
+    }).catch((error) => logger.warn("Failed to update agent status:", error));
+
     if (isNewChat) {
       app.logger.info("Setting existing chat", {
         thread_ts,
@@ -141,6 +154,12 @@ export const directMessageCallback = async ({
       });
       await setExistingChat(thread_ts, data.id);
     }
+
+    await updateAgentStatus({
+      channel,
+      thread_ts,
+      status: "is cleaning chat...",
+    }).catch((error) => logger.warn("Failed to update agent status:", error));
 
     const cleanedChat = cleanV0Stream(data.text);
     const webUrl = data.webUrl || `https://v0.dev/chat/${data.id}`;
@@ -152,6 +171,12 @@ export const directMessageCallback = async ({
       demoUrl,
       cleanedChat,
     });
+    await updateAgentStatus({
+      channel,
+      thread_ts,
+      status: "is sending chat response to Slack...",
+    }).catch((error) => logger.warn("Failed to update agent status:", error));
+
     await sendChatResponseToSlack(say, cleanedChat, thread_ts, webUrl, demoUrl);
     app.logger.info("Chat response sent to Slack", {
       thread_ts,

@@ -6,11 +6,8 @@ import { VercelReceiver } from "@vercel/slack-bolt";
 import registerListeners from "~/listeners";
 import { authMiddleware } from "./lib/auth/middleware";
 
-const logLevel =
-  process.env.NODE_ENV === "development" ? LogLevel.DEBUG : LogLevel.INFO;
-
 const receiver = new VercelReceiver({
-  logLevel,
+  logLevel: LogLevel.DEBUG,
 });
 
 const app = new App({
@@ -18,7 +15,7 @@ const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
   receiver,
   deferInitialization: true,
-  logLevel,
+  logLevel: LogLevel.DEBUG,
 });
 
 app.use(authMiddleware);
