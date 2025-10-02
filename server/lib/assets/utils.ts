@@ -97,7 +97,7 @@ export function validateSignedUrl(
 }
 
 export function proxySlackUrl(slackFileUrl: string): string {
-  const encoded = Buffer.from(slackFileUrl).toString('base64url');
+  const encoded = Buffer.from(slackFileUrl).toString("base64url");
   const secret = process.env.ASSET_SIGNING_SECRET;
   return `${getBaseUrl()}/assets/${encoded}?key=${secret}`;
 }
@@ -141,6 +141,7 @@ export function getBaseUrl() {
   if (
     VERCEL_TARGET_ENV === "production" ||
     VERCEL_TARGET_ENV === "beta" ||
+    VERCEL_TARGET_ENV === "dreamforce" ||
     VERCEL_ENV === "production"
   ) {
     if (!VERCEL_PROD_URL) {
