@@ -5,6 +5,7 @@ const { App } = pkg;
 import { VercelReceiver } from "@vercel/slack-bolt";
 import { authMiddleware } from "~/lib/auth/middleware";
 import registerListeners from "~/listeners";
+import { middleware as messagesMiddleware } from "./listeners/messages/middleware";
 
 const logLevel =
   process.env.NODE_ENV === "development" ? LogLevel.DEBUG : LogLevel.INFO;
@@ -21,8 +22,9 @@ const app = new App({
   logLevel: LogLevel.INFO,
 });
 
-// Add global auth middleware
+// middleware
 app.use(authMiddleware);
+app.message(messagesMiddleware);
 
 registerListeners(app);
 
