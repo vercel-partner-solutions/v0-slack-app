@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   if (!encoded) {
     throw createError({ statusCode: 400, message: "Missing file path" });
   }
-
+  
   // Verify the secret key
   if (key !== process.env.ASSET_SIGNING_SECRET) {
     throw createError({ statusCode: 403, message: "Forbidden" });
