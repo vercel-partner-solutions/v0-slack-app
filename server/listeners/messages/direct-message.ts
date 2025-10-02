@@ -4,6 +4,7 @@ import type {
   SlackEventMiddlewareArgs,
 } from "@slack/bolt";
 import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
+import { app } from "~/app";
 
 import { proxySlackUrl } from "~/lib/assets/utils";
 import { setExistingChat } from "~/lib/redis";
@@ -27,6 +28,10 @@ export const directMessageCallback = async ({
   body,
 }: AllMiddlewareArgs &
   SlackEventMiddlewareArgs<"message"> & { event: GenericMessageEvent }) => {
+  app.logger.info("Direct message event received", {
+    event,
+  });
+
   const { channel, thread_ts, files } = event;
   const { session, isNewChat, chatId } = context;
   const appId = body.api_app_id;
@@ -47,15 +52,37 @@ export const directMessageCallback = async ({
     return;
   }
 
+  app.logger.info("Processing direct message event with context", {
+    context,
+    appId,
+  });
+
   try {
-    // Fire-and-forget status update to avoid blocking
+    app.logger.info("Updating agent status", {
+      channel,
+      thread_ts,
+      status: "is thinking...",
+    });
     updateAgentStatus({
       channel,
       thread_ts,
       status: "is thinking...",
-    }).catch((error) => logger.warn("Failed to update agent status:", error));
+    })
+      .then(() => {
+        app.logger.info("Agent status updated", {
+          channel,
+          thread_ts,
+          status: "is thinking...",
+        });
+      })
+      .catch((error) => logger.warn("Failed to update agent status:", error));
 
     if (!session) {
+      app.logger.info("Posting ephemeral message to sign in", {
+        channel,
+        user: context.userId,
+        thread_ts,
+      });
       await client.chat.postEphemeral({
         channel,
         user: context.userId,
@@ -69,6 +96,11 @@ export const directMessageCallback = async ({
     }
 
     const attachments = createAttachmentsArray(files || []);
+    app.logger.info("Creating attachments array for direct message", {
+      attachments,
+      thread_ts,
+      channel,
+    });
 
     const body = {
       message: event.text,
@@ -103,6 +135,10 @@ export const directMessageCallback = async ({
     }
 
     if (isNewChat) {
+      app.logger.info("Setting existing chat", {
+        thread_ts,
+        chatId: data.id,
+      });
       await setExistingChat(thread_ts, data.id);
     }
 
@@ -110,7 +146,19 @@ export const directMessageCallback = async ({
     const webUrl = data.webUrl || `https://v0.dev/chat/${data.id}`;
     const demoUrl = data.latestVersion?.demoUrl;
 
+    app.logger.info("Sending chat response to Slack", {
+      thread_ts,
+      webUrl,
+      demoUrl,
+      cleanedChat,
+    });
     await sendChatResponseToSlack(say, cleanedChat, thread_ts, webUrl, demoUrl);
+    app.logger.info("Chat response sent to Slack", {
+      thread_ts,
+      webUrl,
+      demoUrl,
+      cleanedChat,
+    });
   } catch (error: unknown) {
     logger.error("Direct message handler failed:", error);
 
@@ -122,6 +170,10 @@ export const directMessageCallback = async ({
       thread_ts,
     });
   } finally {
+    app.logger.info("Clearing agent status", {
+      channel,
+      thread_ts,
+    });
     // this will clear the status
     updateAgentStatus({
       channel,
@@ -138,6 +190,11 @@ const sendChatResponseToSlack = async (
   webUrl?: string,
   demoUrl?: string,
 ): Promise<void> => {
+  app.logger.info("Sending chat response to Slack", {
+    webUrl,
+    demoUrl,
+    cleanedChat,
+  });
   const actions: ActionsBlockElement[] = [];
 
   if (webUrl) {
@@ -178,6 +235,11 @@ const sendChatResponseToSlack = async (
     ],
     text: cleanedChat,
     thread_ts,
+  });
+  app.logger.info("Chat response sent to Slack", {
+    webUrl,
+    demoUrl,
+    cleanedChat,
   });
 };
 
