@@ -29,7 +29,7 @@ export const authMiddleware = async ({
     (args as any).body?.event?.type;
 
   if (!authEventsMatcher.includes(eventType as AuthEventType)) {
-    next();
+    await next();
     return;
   }
 
@@ -39,13 +39,13 @@ export const authMiddleware = async ({
     (args as any).event?.subtype === "bot_message";
 
   if (isBotMessage) {
-    next();
+    await next();
     return;
   }
 
   if (eventType === "message") {
     if ((args as any).event?.channel_type !== "im") {
-      next();
+      await next();
       return;
     }
   }
@@ -66,5 +66,5 @@ export const authMiddleware = async ({
 
   // Attach session to context
   context.session = session;
-  next();
+  await next();
 };

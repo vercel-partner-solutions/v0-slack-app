@@ -23,7 +23,7 @@ import { app } from "~/app";
  * app.message(onlyChannelType("im"), directMessageCallback);
  *
  * @param {SlackEventMiddlewareArgs<"message">["event"]["channel_type"]} type - The Slack channel type to filter for ("im", "group", "mpim", "channel").
- * @returns {Function} Middleware function that only calls next() if the event's channel_type matches the specified type.
+ * @returns {Function} Middleware function that only calls await next() if the event's channel_type matches the specified type.
  */
 export const onlyChannelType =
   (type: SlackEventMiddlewareArgs<"message">["event"]["channel_type"]) =>
@@ -33,14 +33,14 @@ export const onlyChannelType =
    * Channel types include: "im" (DM), "group" (private channel), "mpim" (multi-person DM), and "channel" (public channel).
    *
    * @param {SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs} args - Handler args containing the Slack event and next callback.
-   * @returns {Promise<void>} Resolves after conditionally calling `next()`.
+   * @returns {Promise<void>} Resolves after conditionally calling `await next()`.
    */
   async ({
     event,
     next,
   }: SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs) => {
     if (event.channel_type === type) {
-      next();
+      await next();
     }
   };
 

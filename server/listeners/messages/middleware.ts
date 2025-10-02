@@ -1,7 +1,7 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { GenericMessageEvent } from "@slack/web-api";
 import { getChatIDFromThread } from "~/lib/redis";
-import { V0_URL_REGEX } from "~/lib/slack/utils";
+import { updateAgentStatus, V0_URL_REGEX } from "~/lib/slack/utils";
 
 const v0UrlsInMessageEvent = (event: GenericMessageEvent) => {
   // Example:'<https://v0.app/chat/u8kGDoUQBNM>' or '<https://v0.app/chat/u8kGDoUQBNM|here>'
@@ -25,19 +25,19 @@ export const urlSharedMiddleware = async ({
   const { text } = event;
 
   if (!text) {
-    next();
+    await next();
     return;
   }
 
   const v0Urls = v0UrlsInMessageEvent(event);
   if (v0Urls.length === 0) {
-    next();
+    await next();
     return;
   }
 
   const uniqueV0Urls = Array.from(new Set(v0Urls));
   if (uniqueV0Urls.length === 0) {
-    next();
+    await next();
     return;
   }
 
@@ -69,7 +69,7 @@ export const urlSharedMiddleware = async ({
       text: `You have shared a chat that may not be visible to everyone.`,
     });
   }
-  next();
+  await next();
 };
 
 export const directMessageMiddleware = async ({
@@ -79,12 +79,12 @@ export const directMessageMiddleware = async ({
   logger,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
   if (event.channel_type !== "im") {
-    next();
+    await next();
     return;
   }
 
   if (event.subtype && event.subtype !== "file_share") {
-    next();
+    await next();
     return;
   }
 
@@ -92,7 +92,7 @@ export const directMessageMiddleware = async ({
 
   const { session } = context;
   if (!session) {
-    next();
+    await next();
     return;
   }
 
@@ -100,7 +100,19 @@ export const directMessageMiddleware = async ({
     eventType: event.type,
   });
 
+  await updateAgentStatus({
+    channel: event.channel,
+    thread_ts: event.thread_ts,
+    status: "is reading thread...",
+  });
+
   const chatId = await getChatIDFromThread(event.thread_ts);
+
+  await updateAgentStatus({
+    channel: event.channel,
+    thread_ts: event.thread_ts,
+    status: "is reading channel...",
+  });
 
   const isNewChat = !chatId;
 
@@ -111,5 +123,5 @@ export const directMessageMiddleware = async ({
     chatId,
     isNewChat,
   });
-  next();
+  await next();
 };
