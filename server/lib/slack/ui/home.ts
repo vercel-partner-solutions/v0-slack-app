@@ -1,7 +1,7 @@
 import type { HomeView } from "@slack/web-api";
 import { app } from "~/app";
 import { getBaseUrl } from "~/lib/assets/utils";
-import { deleteSession, type Session } from "~/lib/auth/session";
+import type { Session } from "~/lib/auth/session";
 import { userGet, userGetScopes } from "~/lib/v0/client";
 
 interface SignedInViewProps {
@@ -228,6 +228,85 @@ export const SignedInLoadingView = (): HomeView => {
   };
 };
 
+export const SignedInErrorView = (): HomeView => {
+  return {
+    type: "home",
+    blocks: [
+      // Header
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: "Settings",
+        },
+      },
+      {
+        type: "divider",
+      },
+
+      // Team Selection Section
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "*Team*",
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: "_Error loading settings..._",
+          },
+        ],
+      },
+      {
+        type: "divider",
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "*Account*",
+        },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: "_Error loading settings..._",
+          },
+        ],
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "Please sign out and try again.",
+        },
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: {
+              type: "plain_text",
+              text: "Sign Out",
+            },
+            accessibility_label: "Sign Out",
+            style: "danger",
+            action_id: "sign-out-action",
+            value: "sign-out",
+          },
+        ],
+      },
+    ],
+  };
+};
+
 interface RenderAppHomeViewProps {
   userId: string;
   teamId: string;
@@ -241,7 +320,6 @@ export const renderAppHomeView = async (
   props: RenderAppHomeViewProps,
 ): Promise<void> => {
   const { userId, teamId, session, appId } = props;
-
   try {
     let view: HomeView;
 
@@ -270,7 +348,7 @@ export const renderAppHomeView = async (
 
       if (userGetError || scopesError) {
         app.logger.error("Failed to get user data:", userGetError);
-        await deleteSession(teamId, userId);
+
         // rethrow the error
         throw userGetError || scopesError;
       }
@@ -300,11 +378,7 @@ export const renderAppHomeView = async (
     app.logger.error("Failed to render app home view:", error);
 
     await app.client.views.publish({
-      view: SignedOutView({
-        user: userId,
-        teamId: teamId,
-        appId: appId,
-      }),
+      view: SignedInErrorView(),
       user_id: userId,
     });
   }
