@@ -1,8 +1,4 @@
-import type {
-  AllMiddlewareArgs,
-  Middleware,
-  SlackEventMiddlewareArgs,
-} from "@slack/bolt";
+import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { GenericMessageEvent } from "@slack/web-api";
 import { getChatIDFromThread } from "~/lib/redis";
 import { V0_URL_REGEX } from "~/lib/slack/utils";
@@ -17,7 +13,7 @@ const v0UrlsInMessageEvent = (event: GenericMessageEvent) => {
   return urlMatches.map((match) => match[0]);
 };
 
-const urlSharedMiddleware = async ({
+export const urlSharedMiddleware = async ({
   event,
   next,
   client,
@@ -27,9 +23,8 @@ const urlSharedMiddleware = async ({
     event: GenericMessageEvent;
   }): Promise<void> => {
   const { text } = event;
-  const isPublic = event.channel_type !== "im";
 
-  if (!text || !isPublic) {
+  if (!text) {
     next();
     return;
   }
@@ -77,7 +72,7 @@ const urlSharedMiddleware = async ({
   next();
 };
 
-const directMessageMiddleware = async ({
+export const directMessageMiddleware = async ({
   event,
   next,
   context,
@@ -118,22 +113,3 @@ const directMessageMiddleware = async ({
   });
   next();
 };
-
-const composeMiddleware = (
-  middlewares: Middleware<
-    AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">
-  >[],
-) => {
-  return async (
-    args: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">,
-  ) => {
-    for (const middleware of middlewares) {
-      await middleware(args);
-    }
-  };
-};
-
-export const middleware = composeMiddleware([
-  urlSharedMiddleware,
-  directMessageMiddleware,
-]);
