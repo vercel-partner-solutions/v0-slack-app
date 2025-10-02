@@ -14,15 +14,30 @@ importers:
       '@slack/web-api':
         specifier: ^7.10.0
         version: 7.10.0
+      '@v0-sdk/react':
+        specifier: ^0.3.1
+        version: 0.3.1(react@19.2.0)
+      '@vercel/sdk':
+        specifier: ^1.11.4
+        version: 1.11.4
       '@vercel/slack-bolt':
         specifier: 1.0.2
         version: 1.0.2(@slack/bolt@4.4.0(@types/express@5.0.3))
       ai:
         specifier: latest
         version: 5.0.28(zod@4.1.5)
+      arctic:
+        specifier: ^3.7.0
+        version: 3.7.0
+      h3:
+        specifier: ^1.15.4
+        version: 1.15.4
+      jsondiffpatch:
+        specifier: ^0.7.3
+        version: 0.7.3
       v0-sdk:
-        specifier: ^0.12.0
-        version: 0.12.0
+        specifier: ^0.14.0
+        version: 0.14.0
       zod:
         specifier: ^4.0.17
         version: 4.1.5
@@ -171,6 +186,9 @@ packages:
   '@dependents/detective-less@5.0.1':
     resolution: {integrity: sha512-Y6+WUMsTFWE5jb20IFP4YGa5IrGY/+a/FbOSjDF/wz9gepU2hwCYSXRHP/vPwBvwcY3SVMASt4yXxbXNXigmZQ==}
     engines: {node: '>=18'}
+
+  '@dmsnell/diff-match-patch@1.1.0':
+    resolution: {integrity: sha512-yejLPmM5pjsGvxS9gXablUSbInW7H976c/FJ4iQxWIm7/38xBySRemTPDe34lhg1gVLbJntX0+sH0jYfU+PN9A==}
 
   '@esbuild/aix-ppc64@0.25.5':
     resolution: {integrity: sha512-9o3TMmpmftaCMepOdA5k/yDw8SfInyzWWTjYTFCX3kPSDJMROQTb8jg+h9Cnwnmm1vOzvxN7gIfB5V2ewpjtGA==}
@@ -680,6 +698,24 @@ packages:
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
 
+  '@oslojs/asn1@1.0.0':
+    resolution: {integrity: sha512-zw/wn0sj0j0QKbIXfIlnEcTviaCzYOY3V5rAyjR6YtOByFtJiT574+8p9Wlach0lZH9fddD4yb9laEAIl4vXQA==}
+
+  '@oslojs/binary@1.0.0':
+    resolution: {integrity: sha512-9RCU6OwXU6p67H4NODbuxv2S3eenuQ4/WFLrsq+K/k682xrznH5EVWA7N4VFk9VYVcbFtKqur5YQQZc0ySGhsQ==}
+
+  '@oslojs/crypto@1.0.1':
+    resolution: {integrity: sha512-7n08G8nWjAr/Yu3vu9zzrd0L9XnrJfpMioQcvCMxBIiF5orECHe5/3J0jmXRVvgfqMm/+4oxlQ+Sq39COYLcNQ==}
+
+  '@oslojs/encoding@0.4.1':
+    resolution: {integrity: sha512-hkjo6MuIK/kQR5CrGNdAPZhS01ZCXuWDRJ187zh6qqF2+yMHZpD9fAYpX8q2bOO6Ryhl3XpCT6kUX76N8hhm4Q==}
+
+  '@oslojs/encoding@1.1.0':
+    resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
+
+  '@oslojs/jwt@0.2.0':
+    resolution: {integrity: sha512-bLE7BtHrURedCn4Mco3ma9L4Y1GR2SMBuIvjWr7rmQ4/W/4Jy70TIAgZ+0nIlk0xHz1vNP8x8DCns45Sb2XRbg==}
+
   '@parcel/watcher-android-arm64@2.5.1':
     resolution: {integrity: sha512-KF8+j9nNbUN8vzOFDpRMsaKBHZ/mcjEjMToVMJOhTozkDonQFFrRcfdLWn6yWKCmJKmdVxSgHiYvTCef4/qcBA==}
     engines: {node: '>= 10.0.0'}
@@ -1084,6 +1120,11 @@ packages:
     resolution: {integrity: sha512-+GeGMebMCy0elMNg67LRNoVnUFPIm37iu5CmHESVx56/9Jsfdpsvbv605DQ81Pi/x11IdKUsS5nzgTYbCQU9fg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@v0-sdk/react@0.3.1':
+    resolution: {integrity: sha512-yR8bvUs7fx+cTB2wUn6nqmVWJ+sSzeDxH7w6uVaFsVCsHHg1ZQExDo0as/WiMq4Yx1XmWWPlltqAQFgD2UgsJA==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+
   '@vercel/functions@2.2.13':
     resolution: {integrity: sha512-14ArBSIIcOBx9nrEgaJb4Bw+en1gl6eSoJWh8qjifLl5G3E4dRXCFOT8HP+w66vb9Wqyd1lAQBrmRhRwOj9X9A==}
     engines: {node: '>= 18'}
@@ -1114,6 +1155,15 @@ packages:
   '@vercel/oidc@3.0.0':
     resolution: {integrity: sha512-XOoUcf/1VfGArUAfq0ELxk6TD7l4jGcrOsWjQibj4wYM74uNihzZ9gA46ywWegoqKWWdph4y5CKxGI9823deoA==}
     engines: {node: '>= 20'}
+
+  '@vercel/sdk@1.11.4':
+    resolution: {integrity: sha512-TlLGQq6ToqnGhICQjvAyjSJkrHsLtqIM+nZuGV/SiamwSzXjiTpeTAe5wMDAao7LPJ9Efir/z76TvXFbLlW/9Q==}
+    hasBin: true
+    peerDependencies:
+      '@modelcontextprotocol/sdk': '>=1.5.0 <1.10.0'
+    peerDependenciesMeta:
+      '@modelcontextprotocol/sdk':
+        optional: true
 
   '@vercel/slack-bolt@1.0.2':
     resolution: {integrity: sha512-y5onITJK5lFchR1lIErn/JO80yYknvVDzERhtQEGfCCIFP/AjvlJKgfXaL0CDnoVobah9QR3e2XnV+KZGH4G4g==}
@@ -1221,6 +1271,9 @@ packages:
   archiver@7.0.1:
     resolution: {integrity: sha512-ZcbTaIqJOfCc03QwD468Unz/5Ir8ATtvAHsK+FdXbDIbGfihqh9mrvdcYunQzqn4HrvWWaFyaxJhGZagaJJpPQ==}
     engines: {node: '>= 14'}
+
+  arctic@3.7.0:
+    resolution: {integrity: sha512-ZMQ+f6VazDgUJOd+qNV+H7GohNSYal1mVjm5kEaZfE2Ifb7Ss70w+Q7xpJC87qZDkMZIXYf0pTIYZA0OPasSbw==}
 
   ast-module-types@6.0.1:
     resolution: {integrity: sha512-WHw67kLXYbZuHTmcdbIrVArCq5wxo6NEuj3hiYAWr8mwJeC+C2mMCIBIWCiDoCye/OF/xelc+teJ1ERoWmnEIA==}
@@ -2115,6 +2168,11 @@ packages:
   json-schema@0.4.0:
     resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
 
+  jsondiffpatch@0.7.3:
+    resolution: {integrity: sha512-zd4dqFiXSYyant2WgSXAZ9+yYqilNVvragVNkNRn2IFZKgjyULNrKRznqN4Zon0MkLueCg+3QaPVCnDAVP20OQ==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    hasBin: true
+
   jsonwebtoken@9.0.2:
     resolution: {integrity: sha512-PRp66vJ865SSqOlgqS8hujT5U4AOgMfhrwYIuIhfKaoSCZcirrmASQr8CX7cUg+RMih+hgznrjp99o+W4pJLHQ==}
     engines: {node: '>=12', npm: '>=6'}
@@ -2629,6 +2687,10 @@ packages:
   rc9@2.1.2:
     resolution: {integrity: sha512-btXCnMmRIBINM2LDZoEmOogIZU7Qe7zn4BpomSKZ/ykbLObuBdvG+mFq11DL6fjH1DRwHhrlgtYWG96bJiC7Cg==}
 
+  react@19.2.0:
+    resolution: {integrity: sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ==}
+    engines: {node: '>=0.10.0'}
+
   read-package-up@11.0.0:
     resolution: {integrity: sha512-MbgfoNPANMdb4oRBNg5eqLbB2t2r+o5Ua1pNt8BqGp4I0FJZhuVSOj3PaBPni4azWuSzEdNn2evevzVmEk1ohQ==}
     engines: {node: '>=18'}
@@ -3118,8 +3180,8 @@ packages:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
-  v0-sdk@0.12.0:
-    resolution: {integrity: sha512-1uLzoI+twlPr5F8LmQo3FKi1Wt/2SsgEneffV0E2S17xGSiGgsk8Ur4HtdSbyQSCcIuF2A7JJomkiPDnHIuVBQ==}
+  v0-sdk@0.14.0:
+    resolution: {integrity: sha512-6cqRdOdc3gAEbBR4FQgKmkaSndciyqI4qr1PkEjDlEaCOfNZJh5xLwkdLBClaDzUnl9NPqgG/5abOcUkTUW0kg==}
     engines: {node: '>=22', pnpm: '>=9'}
 
   validate-npm-package-license@3.0.4:
@@ -3332,6 +3394,8 @@ snapshots:
     dependencies:
       gonzales-pe: 4.3.0
       node-source-walk: 7.0.1
+
+  '@dmsnell/diff-match-patch@1.1.0': {}
 
   '@esbuild/aix-ppc64@0.25.5':
     optional: true
@@ -3723,6 +3787,25 @@ snapshots:
 
   '@opentelemetry/api@1.9.0': {}
 
+  '@oslojs/asn1@1.0.0':
+    dependencies:
+      '@oslojs/binary': 1.0.0
+
+  '@oslojs/binary@1.0.0': {}
+
+  '@oslojs/crypto@1.0.1':
+    dependencies:
+      '@oslojs/asn1': 1.0.0
+      '@oslojs/binary': 1.0.0
+
+  '@oslojs/encoding@0.4.1': {}
+
+  '@oslojs/encoding@1.1.0': {}
+
+  '@oslojs/jwt@0.2.0':
+    dependencies:
+      '@oslojs/encoding': 0.4.1
+
   '@parcel/watcher-android-arm64@2.5.1':
     optional: true
 
@@ -4111,6 +4194,11 @@ snapshots:
       '@typescript-eslint/types': 8.41.0
       eslint-visitor-keys: 4.2.1
 
+  '@v0-sdk/react@0.3.1(react@19.2.0)':
+    dependencies:
+      jsondiffpatch: 0.7.3
+      react: 19.2.0
+
   '@vercel/functions@2.2.13':
     dependencies:
       '@vercel/oidc': 2.0.2
@@ -4149,6 +4237,10 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
       ms: 2.1.3
+
+  '@vercel/sdk@1.11.4':
+    dependencies:
+      zod: 3.25.76
 
   '@vercel/slack-bolt@1.0.2(@slack/bolt@4.4.0(@types/express@5.0.3))':
     dependencies:
@@ -4287,6 +4379,12 @@ snapshots:
       readdir-glob: 1.1.3
       tar-stream: 3.1.7
       zip-stream: 6.0.1
+
+  arctic@3.7.0:
+    dependencies:
+      '@oslojs/crypto': 1.0.1
+      '@oslojs/encoding': 1.1.0
+      '@oslojs/jwt': 0.2.0
 
   ast-module-types@6.0.1: {}
 
@@ -5174,6 +5272,10 @@ snapshots:
 
   json-schema@0.4.0: {}
 
+  jsondiffpatch@0.7.3:
+    dependencies:
+      '@dmsnell/diff-match-patch': 1.1.0
+
   jsonwebtoken@9.0.2:
     dependencies:
       jws: 3.2.2
@@ -5766,6 +5868,8 @@ snapshots:
       defu: 6.1.4
       destr: 2.0.5
 
+  react@19.2.0: {}
+
   read-package-up@11.0.0:
     dependencies:
       find-up-simple: 1.0.1
@@ -6268,7 +6372,7 @@ snapshots:
 
   uuid@11.1.0: {}
 
-  v0-sdk@0.12.0: {}
+  v0-sdk@0.14.0: {}
 
   validate-npm-package-license@3.0.4:
     dependencies:
