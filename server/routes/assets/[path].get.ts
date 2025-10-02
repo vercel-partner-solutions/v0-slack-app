@@ -11,6 +11,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  console.log("Received request for asset", encodedUrl);
   try {
     // Decode the URL that was passed as the path parameter
     const fileUrl = decodeURIComponent(encodedUrl);
@@ -29,6 +30,8 @@ export default defineEventHandler(async (event) => {
     const expiresAt = query.exp as string;
     const chatId = query.chat as string;
 
+    console.log("Query parameters for asset", query);
+
     // Validate the signed URL
     const validation = validateSignedUrl(fileUrl, signature, expiresAt, chatId);
 
@@ -46,13 +49,12 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    console.log("Sending proxy for fileUrl", fileUrl);
     // Use sendProxy for reliable streaming with authentication
     return sendProxy(event, fileUrl, {
       headers: {
         Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
       },
-      sendStream: true,
-      streamRequest: true,
     });
   } catch (error) {
     app.logger.error("Error fetching Slack asset:", error);
