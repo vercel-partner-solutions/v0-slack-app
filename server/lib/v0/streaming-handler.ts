@@ -25,6 +25,21 @@ interface ChatMetadata {
   demoUrl?: string;
 }
 
+interface TaskTracker {
+  id: string;
+  type: string;
+  taskNameActive?: string;
+  taskNameComplete?: string;
+  lastState: "pending" | "active" | "complete";
+}
+
+interface TaskInfo {
+  thinking?: {
+    duration: number;
+  };
+  tasks: TaskTracker[];
+}
+
 export async function handleV0StreamToSlack({
   client,
   logger,
@@ -40,16 +55,19 @@ export async function handleV0StreamToSlack({
   const streamStateManager = new StreamStateManager();
 
   let streamTs: string | undefined;
-  let lastContent = "";
   const chatMetadata: ChatMetadata = {};
   let batchedContent = "";
   let batchTimeout: NodeJS.Timeout | undefined;
   const BATCH_DELAY_MS = 100;
   let totalChunks = 0;
   let totalBatches = 0;
+  const taskTrackers = new Map<string, TaskTracker>();
+  const sentTaskLines = new Set<string>();
+  let lastAssistantContent = "";
+  let hasStartedTasks = false;
 
   const flushBatch = async () => {
-    if (batchedContent && streamTs) {
+    if (streamTs && batchedContent) {
       totalBatches++;
       logger.debug(
         `📤 Flushing batch #${totalBatches} (${batchedContent.length} chars)`,
@@ -90,15 +108,41 @@ export async function handleV0StreamToSlack({
       `📨 Stream state update - streaming: ${state.isStreaming}, complete: ${state.isComplete}`,
     );
 
-    const currentContent = renderToMarkdown(state.content);
-    logger.debug(`Current content length: ${currentContent.length} chars`);
+    const taskInfo = extractTaskInfo(state.content, taskTrackers);
+    const assistantContent = renderToMarkdown(state.content);
 
-    const newContent = currentContent.slice(lastContent.length);
+    if (taskInfo.thinking && !hasStartedTasks) {
+      scheduleBatch(`\n\n_Thought for ${taskInfo.thinking.duration}s_\n\n`);
+      hasStartedTasks = true;
+    }
 
-    if (newContent) {
-      logger.debug(`🆕 New content detected: ${newContent.length} chars`);
-      scheduleBatch(newContent);
-      lastContent = currentContent;
+    for (const task of taskInfo.tasks) {
+      const taskKey = `${task.id}-${task.lastState}`;
+      if (!sentTaskLines.has(taskKey)) {
+        const emoji =
+          task.lastState === "complete"
+            ? ":todo_done:"
+            : task.lastState === "active"
+              ? ":loading-1273:"
+              : ":todo_unchecked:";
+
+        const taskName =
+          task.lastState === "complete" && task.taskNameComplete
+            ? task.taskNameComplete
+            : task.taskNameActive || "Processing...";
+
+        scheduleBatch(`\n${emoji} ${taskName}`);
+        sentTaskLines.add(taskKey);
+      }
+    }
+
+    if (assistantContent !== lastAssistantContent) {
+      logger.debug(`🆕 Content changed`);
+      const contentUpdate = assistantContent.slice(lastAssistantContent.length);
+      if (contentUpdate) {
+        scheduleBatch(contentUpdate);
+        lastAssistantContent = assistantContent;
+      }
     }
   });
 
@@ -138,20 +182,22 @@ export async function handleV0StreamToSlack({
         if (batchTimeout) {
           clearTimeout(batchTimeout);
         }
-        await flushBatch();
 
         if (!streamTs) {
           logger.error("❌ No stream timestamp available");
           return;
         }
 
-        const blocks = createCompletionBlocks(chatMetadata);
-        logger.debug(`🎯 Stopping stream with ${blocks.length} blocks`);
+        await flushBatch();
+
+        const actionBlocks = createCompletionBlocks(chatMetadata);
+
+        logger.debug(`🎯 Stopping stream with ${actionBlocks.length} blocks`);
 
         await slackStreaming.stopStream({
           channel,
           ts: streamTs,
-          blocks,
+          blocks: actionBlocks,
         });
 
         logger.debug("✅ Stream stopped successfully");
@@ -189,6 +235,74 @@ export async function handleV0StreamToSlack({
     }
     logger.debug("🏁 Stream handler finished");
   }
+}
+
+function extractTaskInfo(
+  content: MessageBinaryFormat,
+  taskTrackers: Map<string, TaskTracker>,
+): TaskInfo {
+  const info: TaskInfo = {
+    tasks: [],
+  };
+
+  if (!Array.isArray(content)) return info;
+
+  for (const [type, data] of content) {
+    if (type === 0 && Array.isArray(data)) {
+      for (const element of data) {
+        if (!Array.isArray(element)) continue;
+
+        const [tagName, props] = element;
+
+        if (tagName === "AssistantMessageContentPart" && props?.part) {
+          const part = props.part;
+          const taskId = part.id || "";
+
+          if (
+            part.type === "task-thinking-v1" &&
+            part.parts &&
+            part.finishedAt
+          ) {
+            for (const thinkingPart of part.parts) {
+              if (
+                thinkingPart.type === "thinking-end" &&
+                thinkingPart.duration
+              ) {
+                info.thinking = { duration: Math.round(thinkingPart.duration) };
+              }
+            }
+          } else if (
+            part.type === "task-search-repo-v1" ||
+            part.type === "task-coding-v1"
+          ) {
+            let tracker = taskTrackers.get(taskId);
+            const hasFinished = !!part.finishedAt;
+
+            if (part.taskNameActive && !tracker) {
+              tracker = {
+                id: taskId,
+                type: part.type,
+                taskNameActive: part.taskNameActive,
+                taskNameComplete: part.taskNameComplete,
+                lastState: "active",
+              };
+              taskTrackers.set(taskId, tracker);
+            }
+
+            if (hasFinished && tracker && tracker.lastState === "active") {
+              tracker.lastState = "complete";
+              if (part.taskNameComplete) {
+                tracker.taskNameComplete = part.taskNameComplete;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  info.tasks = Array.from(taskTrackers.values());
+  return info;
 }
 
 function createCompletionBlocks(metadata: ChatMetadata): unknown[] {
