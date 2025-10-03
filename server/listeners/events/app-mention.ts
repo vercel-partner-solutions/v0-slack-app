@@ -1,11 +1,10 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { AppMentionEvent } from "@slack/web-api";
 import { generateText } from "ai";
-import { type ChatDetail, v0 } from "v0-sdk";
+import { v0 } from "v0-sdk";
 import { app } from "~/app";
 import { generateSignedAssetUrl } from "~/lib/assets/utils";
 import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
-import { createActionBlocks } from "~/lib/slack/ui/blocks";
 import {
   getMessagesFromEvent,
   isV0ChatUrl,
@@ -14,85 +13,104 @@ import {
   tryGetChatIdFromV0Url,
   updateAgentStatus,
 } from "~/lib/slack/utils";
-import { cleanV0Stream } from "~/lib/v0/utils";
+import { handleV0StreamToSlack } from "~/lib/v0/streaming-handler";
 
 export const appMentionCallback = async ({
   event,
-  say,
+  client,
   logger,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
   const { channel, thread_ts, ts } = event;
 
+  logger.debug("📢 App mention received");
+  logger.debug(`Channel: ${channel}, Thread: ${thread_ts}, TS: ${ts}`);
+
   updateAppMentionStatus(event);
 
   try {
+    logger.debug("📨 Getting messages from event...");
     const messages = await getMessagesFromEvent(event);
+    logger.debug(`Got ${messages.length} messages`);
 
+    logger.debug("🔄 Creating prompt and resolving chat ID...");
     const [prompt, attachments, chatId] = await Promise.all([
       createPromptFromMessages(messages),
       createAttachmentsArray(messages),
       resolveChatId(messages, thread_ts),
     ]);
+    logger.debug(`Prompt: ${prompt.substring(0, 100)}...`);
+    logger.debug(
+      `Attachments: ${attachments.length}, Chat ID: ${chatId || "none"}`,
+    );
 
-    let chat: ChatDetail;
+    let stream: ReadableStream<Uint8Array>;
+
     if (chatId) {
-      const [updatedChat] = (await Promise.all([
-        v0.chats.sendMessage({
-          chatId,
-          message: prompt,
-          responseMode: "sync",
-          attachments: attachments,
-        }),
-        setExistingChat(thread_ts, chatId),
-      ])) as [ChatDetail, undefined];
-      chat = updatedChat;
-    } else {
-      chat = (await v0.chats.create({
+      logger.debug(`🔄 Sending to existing chat: ${chatId}`);
+      await setExistingChat(thread_ts, chatId);
+      const response = await v0.chats.sendMessage({
+        chatId,
         message: prompt,
-        responseMode: "sync",
+        responseMode: "experimental_stream",
         attachments: attachments,
-      })) as ChatDetail;
-      await setExistingChat(thread_ts, chat.id);
+      });
+
+      if (!(response instanceof ReadableStream)) {
+        throw new Error("Expected stream response");
+      }
+      logger.debug("✅ Got stream from v0.chats.sendMessage");
+      stream = response;
+    } else {
+      logger.debug("🆕 Creating new chat");
+      const response = await v0.chats.create({
+        message: prompt,
+        responseMode: "experimental_stream",
+        attachments: attachments,
+      });
+
+      if (!(response instanceof ReadableStream)) {
+        throw new Error("Expected stream response");
+      }
+      logger.debug("✅ Got stream from v0.chats.create");
+      stream = response;
     }
 
-    const summary = cleanV0Stream(chat.text);
-    const actionBlocks = createActionBlocks({
-      demoUrl: chat.latestVersion?.demoUrl,
-      webUrl: chat.webUrl,
-      chatId: chat.id,
-    });
-
-    await say({
-      blocks: [
-        {
-          type: "markdown",
-          text: summary,
-        },
-        ...actionBlocks,
-      ],
-      text: summary,
-      thread_ts: thread_ts || ts,
-    });
-
-    await MessageState.setCompleted({
+    logger.debug("🚀 Calling handleV0StreamToSlack...");
+    await handleV0StreamToSlack({
+      client,
+      logger,
       channel,
-      timestamp: ts,
+      thread_ts: thread_ts || ts,
+      v0Stream: stream,
+      onComplete: async (completedChatId) => {
+        logger.debug(`✅ Stream complete, chat ID: ${completedChatId}`);
+        if (completedChatId) {
+          logger.debug(`💾 Saving chat ID: ${completedChatId}`);
+          await setExistingChat(thread_ts, completedChatId);
+        }
+
+        logger.debug("✅ Setting completed reaction");
+        await MessageState.setCompleted({
+          channel,
+          timestamp: ts,
+        });
+      },
     });
+    logger.debug("✅ handleV0StreamToSlack finished");
   } catch (error) {
-    logger.error("app_mention handler failed:", error);
+    logger.error("❌ app_mention handler failed:", error);
 
     MessageState.setError({
       channel,
       timestamp: ts,
     }).catch((error) => logger.warn("Failed to set error reaction:", error));
   } finally {
-    // clear agent status
     if (thread_ts) {
       await updateAgentStatus({
         channel,
         thread_ts,
         status: "",
-      });
+      }).catch((error) => logger.warn("Failed to clear agent status:", error));
     }
   }
 };

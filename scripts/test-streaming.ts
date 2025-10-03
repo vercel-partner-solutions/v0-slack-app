@@ -1,5 +1,5 @@
 import { createClient } from "v0-sdk";
-import { StreamStateManager } from "./manager";
+import { StreamStateManager } from "../server/lib/v0/stream-manager";
 import { printStreamUpdate } from "./render-to-console";
 
 const V0_TOKEN = process.env.V0_API_KEY;
