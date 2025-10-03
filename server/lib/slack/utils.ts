@@ -13,8 +13,8 @@ import type {
 } from "@slack/web-api";
 import type { MessageElement } from "@slack/web-api/dist/types/response/ConversationsHistoryResponse";
 import type { ModelMessage } from "ai";
+import type { EventHandlerRequest, H3Event } from "h3";
 import { app } from "~/app";
-
 /**
  * Helper function to create a middleware that only runs a callback if the message
  * is in a specific Slack channel type.
@@ -23,7 +23,7 @@ import { app } from "~/app";
  * app.message(onlyChannelType("im"), directMessageCallback);
  *
  * @param {SlackEventMiddlewareArgs<"message">["event"]["channel_type"]} type - The Slack channel type to filter for ("im", "group", "mpim", "channel").
- * @returns {Function} Middleware function that only calls next() if the event's channel_type matches the specified type.
+ * @returns {Function} Middleware function that only calls await next() if the event's channel_type matches the specified type.
  */
 export const onlyChannelType =
   (type: SlackEventMiddlewareArgs<"message">["event"]["channel_type"]) =>
@@ -33,7 +33,7 @@ export const onlyChannelType =
    * Channel types include: "im" (DM), "group" (private channel), "mpim" (multi-person DM), and "channel" (public channel).
    *
    * @param {SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs} args - Handler args containing the Slack event and next callback.
-   * @returns {Promise<void>} Resolves after conditionally calling `next()`.
+   * @returns {Promise<void>} Resolves after conditionally calling `await next()`.
    */
   async ({
     event,
@@ -80,9 +80,9 @@ export type SlackUIMessage = ModelMessage & {
     event_type?: string;
     event_payload?: {
       chat_id?: string;
-      [key: string]: any;
+      [key: string]: unknown;
     };
-    [key: string]: any;
+    [key: string]: unknown;
   };
 };
 
@@ -95,15 +95,14 @@ const getThreadMessages = async (
 };
 
 export const getThreadMessagesAsModelMessages = async (
-  args: ConversationsRepliesArguments & { botId: string },
+  args: ConversationsRepliesArguments,
 ): Promise<SlackUIMessage[]> => {
-  const { botId } = args;
   const messages = await getThreadMessages(args);
 
   return messages.map((message) => {
     const { bot_id, text } = message;
     return {
-      role: bot_id === botId ? "assistant" : "user",
+      role: bot_id ? "assistant" : "user",
       content: text,
       metadata: {
         ...message,
@@ -245,13 +244,11 @@ export const MessageState = {
   },
 };
 
+export const V0_URL_REGEX = /https:\/\/v0\.app\/chat\/[a-zA-Z0-9_-]+/g;
 export const isV0ChatUrl = (url: URL | string): boolean => {
   // Convert URL object to string
   const urlString = url instanceof URL ? url.toString() : url;
-
-  // Validate that this is a v0.app chat URL - allows additional paths and query params
-  // biome-ignore lint/complexity/noUselessEscapeInRegex: <I think it's wrong>
-  const v0ChatUrlRegex = /^https:\/\/v0\.app\/chat\/[^\/]+-[a-zA-Z0-9]+/;
+  const v0ChatUrlRegex = V0_URL_REGEX;
   return v0ChatUrlRegex.test(urlString);
 };
 
@@ -276,23 +273,46 @@ export const tryGetChatIdFromV0Url = (
 export const getMessagesFromEvent = async (
   event: AppMentionEvent | GenericMessageEvent,
 ): Promise<SlackUIMessage[]> => {
-  const { channel, thread_ts, bot_id, text } = event;
+  const { channel, thread_ts, text, files } = event;
   let messages: SlackUIMessage[] = [];
   if (thread_ts) {
     messages = await getThreadMessagesAsModelMessages({
       channel,
       ts: thread_ts,
-      botId: bot_id,
     });
   } else {
     messages = [
       {
         role: "user",
         content: text,
+        metadata: {
+          // @ts-expect-error - files is not typed correctly
+          files: files,
+        },
       },
     ];
   }
   return messages;
+};
+
+export const redirectToSlack = (
+  event: H3Event<EventHandlerRequest>,
+  teamId?: string,
+  tab?: "home" | "messages" | "about",
+  appId?: string,
+) => {
+  const params = [
+    teamId ? `team=${encodeURIComponent(teamId)}` : null,
+    appId ? `id=${encodeURIComponent(appId)}` : null,
+    tab ? `tab=${encodeURIComponent(tab)}` : null,
+  ]
+    .filter(Boolean)
+    .join("&");
+  return sendRedirect(event, `slack://app${params ? `?${params}` : ""}`, 302);
+};
+
+export const stripSlackUserTags = (text: string) => {
+  return text.replace(/<@[^>]+>\s*/g, "").trim();
 };
 
 export function buttonActionOrPlainTextInputAction(

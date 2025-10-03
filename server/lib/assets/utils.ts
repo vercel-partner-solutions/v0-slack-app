@@ -96,26 +96,74 @@ export function validateSignedUrl(
   };
 }
 
-export function getBaseUrl() {
-  const NODE_ENV = process.env.NODE_ENV;
-  const VERCEL_URL = process.env.VERCEL_URL;
-  const NGROK_URL = process.env.NGROK_URL;
+export function proxySlackUrl(slackFileUrl: string): string {
+  const encoded = Buffer.from(slackFileUrl).toString("base64url");
+  const secret = process.env.ASSET_SIGNING_SECRET;
+  return `${getBaseUrl()}/assets/${encoded}?key=${secret}`;
+}
 
-  if (NODE_ENV === "development") {
-    // This should be set by the dev.tunnel.ts script
-    // https://github.com/vercel-partner-solutions/v0-slack-app/blob/05563e401da13dfbca4da97b32f50e455e33bdbf/scripts/dev.tunnel.ts#L165
+export function getBaseUrl() {
+  const {
+    VERCEL_URL,
+    NGROK_URL,
+    NODE_ENV,
+    VERCEL_TARGET_ENV,
+    VERCEL_PROD_URL,
+    VERCEL_ENV,
+  } = process.env;
+
+  // Development environment - check multiple indicators
+  const isDevelopment =
+    VERCEL_TARGET_ENV === "development" ||
+    NODE_ENV === "development" ||
+    VERCEL_ENV === "development";
+
+  if (isDevelopment) {
     if (!NGROK_URL) {
       throw new Error(
         "NGROK_URL environment variable is required for development environment",
       );
     }
     return NGROK_URL;
-  } else {
+  }
+
+  // Preview environment
+  if (VERCEL_TARGET_ENV === "preview") {
     if (!VERCEL_URL) {
       throw new Error(
-        "VERCEL_URL environment variable is required for production environment",
+        "VERCEL_URL environment variable is required for preview environment",
       );
     }
     return `https://${VERCEL_URL}`;
   }
+
+  // Production environment
+  if (
+    VERCEL_TARGET_ENV === "production" ||
+    VERCEL_TARGET_ENV === "beta" ||
+    VERCEL_TARGET_ENV === "dreamforce" ||
+    VERCEL_ENV === "production"
+  ) {
+    if (!VERCEL_PROD_URL) {
+      throw new Error(
+        "VERCEL_PROD_URL environment variable is required for production environment",
+      );
+    }
+    return `https://${VERCEL_PROD_URL}`;
+  }
+
+  // Fallback: if no environment is clearly defined, assume development
+  // This helps prevent the "Invalid environment" error during sign-out
+  if (!VERCEL_TARGET_ENV && !VERCEL_ENV && NODE_ENV !== "production") {
+    if (!NGROK_URL) {
+      throw new Error(
+        "NGROK_URL environment variable is required for development environment",
+      );
+    }
+    return NGROK_URL;
+  }
+
+  throw new Error(
+    `Invalid environment - VERCEL_TARGET_ENV: ${VERCEL_TARGET_ENV}, VERCEL_ENV: ${VERCEL_ENV}, NODE_ENV: ${NODE_ENV}`,
+  );
 }

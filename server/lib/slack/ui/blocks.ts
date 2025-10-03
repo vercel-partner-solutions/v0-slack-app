@@ -1,4 +1,5 @@
 import type { Block, Button, KnownBlock, WebClient } from "@slack/web-api";
+import { getSignInUrl } from "./home";
 
 export const OpenInV0Button = ({ webUrl }: { webUrl: string }): Button => {
   return {
@@ -265,4 +266,32 @@ export const updateTasksBlock = async ({
     ts: messageTs,
     blocks: [...nonTaskBlocks, newTaskBlock] as (Block | KnownBlock)[],
   });
+};
+
+export const SignInBlock = ({
+  user,
+  teamId,
+  appId,
+}: {
+  user: string;
+  teamId: string;
+  appId: string;
+}) => {
+  return {
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: `Hi, <@${user}>. Please sign in to continue.`,
+    },
+    accessory: {
+      type: "button",
+      text: {
+        type: "plain_text",
+        text: "Sign In",
+      },
+      url: getSignInUrl(user, teamId, appId),
+      action_id: "sign-in-action",
+      value: "sign-in",
+    },
+  };
 };

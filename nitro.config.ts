@@ -3,8 +3,9 @@ export default defineNitroConfig({
   compatibilityDate: "2025-07-27",
   storage: {
     redis: {
-      driver: "redis",
-      url: process.env.REDIS_URL,
+      driver: "upstash",
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
     },
   },
 });
