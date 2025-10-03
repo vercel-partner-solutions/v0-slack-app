@@ -1,6 +1,6 @@
 import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { GenericMessageEvent } from "@slack/web-api";
-import { getExistingChat } from "~/lib/redis";
+import { getChat } from "~/lib/redis";
 import { updateAgentStatus, V0_URL_REGEX } from "~/lib/slack/utils";
 
 const v0UrlsInMessageEvent = (event: GenericMessageEvent) => {
@@ -106,7 +106,11 @@ export const directMessageMiddleware = async ({
     status: "is reading thread...",
   });
 
-  const chatId = await getExistingChat(event.thread_ts, event.channel);
+  const chatId = await getChat({
+    ts: event.thread_ts,
+    channel: event.channel,
+    team: event.team,
+  });
 
   await updateAgentStatus({
     channel: event.channel,

@@ -1,21 +1,24 @@
 import { app } from "~/app";
-
 export const redis = useStorage("redis");
 
-export const getExistingChat = async (
-  thread_ts: string,
-  channel: string,
-): Promise<string | undefined> => {
-  const chatKey = `chat:${channel}:${thread_ts}`;
+// Timestamp can be thread_ts or ts
+const createChatKey = (channel: string, ts: string, team: string) => {
+  return `chat_${team}:${channel}:${ts}`;
+};
+
+interface RedisChatParams {
+  ts: string;
+  channel: string;
+  team: string;
+}
+
+export const getChat = async ({ ts, channel, team }: RedisChatParams) => {
+  const chatKey = createChatKey(channel, ts, team);
   try {
-    const existingChatId = await redis.get(chatKey);
+    const existingChatId = await redis.get<string>(chatKey);
 
     if (existingChatId === null || existingChatId === undefined) {
       return undefined;
-    }
-
-    if (typeof existingChatId !== "string") {
-      throw new Error("Existing chat ID is not a string");
     }
 
     return existingChatId;
@@ -33,12 +36,17 @@ export const getExistingChat = async (
   }
 };
 
-export const setExistingChat = async (
-  thread_ts: string,
-  chatId: string,
-  channel: string,
-): Promise<void> => {
-  const chatKey = `chat:${channel}:${thread_ts}`;
+interface SetChatParams extends RedisChatParams {
+  chatId: string;
+}
+
+export const setChat = async ({
+  ts,
+  channel,
+  team,
+  chatId,
+}: SetChatParams): Promise<void> => {
+  const chatKey = createChatKey(channel, ts, team);
   try {
     await redis.set(chatKey, chatId);
   } catch (error) {
@@ -52,4 +60,47 @@ export const setExistingChat = async (
       });
     }
   }
+};
+
+export const deleteChat = async ({
+  ts,
+  channel,
+  team,
+}: RedisChatParams): Promise<void> => {
+  const chatKey = createChatKey(channel, ts, team);
+  try {
+    await redis.del(chatKey);
+  } catch (error) {
+    if (error instanceof Error) {
+      app.logger.error(`Failed to delete existing chat with key: ${chatKey}`, {
+        error: error.message,
+      });
+    } else {
+      app.logger.error(`Failed to delete existing chat with key: ${chatKey}`, {
+        error,
+      });
+    }
+  }
+};
+
+export const hasChat = async ({
+  ts,
+  channel,
+  team,
+}: RedisChatParams): Promise<boolean> => {
+  const chatKey = createChatKey(channel, ts, team);
+  try {
+    return await redis.has(chatKey);
+  } catch (error) {
+    if (error instanceof Error) {
+      app.logger.error(`Failed to check if chat exists with key: ${chatKey}`, {
+        error: error.message,
+      });
+    } else {
+      app.logger.error(`Failed to check if chat exists with key: ${chatKey}`, {
+        error,
+      });
+    }
+  }
+  return false;
 };

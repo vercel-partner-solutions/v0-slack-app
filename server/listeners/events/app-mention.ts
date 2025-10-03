@@ -2,15 +2,13 @@ import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import { generateText } from "ai";
 import { app } from "~/app";
 import { proxySlackUrl } from "~/lib/assets/utils";
-import { getExistingChat, setExistingChat } from "~/lib/redis";
+import { getChat, setChat } from "~/lib/redis";
 import { createActionBlocks, SignInBlock } from "~/lib/slack/ui/blocks";
 
 import {
   getMessagesFromEvent,
-  isV0ChatUrl,
   type SlackUIMessage,
   stripSlackUserTags,
-  tryGetChatIdFromV0Url,
   updateAgentStatus,
 } from "~/lib/slack/utils";
 import {
@@ -31,9 +29,11 @@ export const appMentionCallback = async ({
   logger,
   body,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
-  const { channel, thread_ts, ts } = event;
+  const { channel, thread_ts, ts, team } = event;
   const { userId, teamId, session } = context;
   const appId = body.api_app_id;
+
+  const timestamp = thread_ts || ts;
 
   try {
     if (!session) {
@@ -41,14 +41,14 @@ export const appMentionCallback = async ({
         channel,
         blocks: [SignInBlock({ user: userId, teamId, appId })],
         text: `Hi, <@${userId}>. Please sign in to continue.`,
-        thread_ts: thread_ts || ts,
+        thread_ts: timestamp,
       });
       return;
     }
 
     await updateAgentStatus({
       channel,
-      thread_ts: thread_ts || ts,
+      thread_ts: timestamp,
       status: "is thinking...",
     });
 
@@ -57,7 +57,7 @@ export const appMentionCallback = async ({
     const [prompt, attachments, chatId] = await Promise.all([
       createPromptFromMessages(messages),
       createAttachmentsArray(messages),
-      resolveChatId(messages, thread_ts),
+      getChat({ ts: timestamp, channel, team }),
     ]);
 
     const cleanPrompt = stripSlackUserTags(prompt);
@@ -90,7 +90,6 @@ export const appMentionCallback = async ({
       }
 
       chat = chatData;
-      await setExistingChat(thread_ts, chat.id, channel);
     } else {
       logger.info(`Creating new chat with prompt: ${cleanPrompt}`);
       const { data: chatData, error: createChatError } = await chatsCreate({
@@ -115,7 +114,7 @@ export const appMentionCallback = async ({
       }
 
       // use ts here because it's a parent level message
-      await setExistingChat(ts, chatData.id, channel);
+      await setChat({ ts: timestamp, channel, team, chatId: chatData.id });
       chat = chatData;
     }
 
@@ -135,7 +134,7 @@ export const appMentionCallback = async ({
       ],
       text: summary,
       channel,
-      thread_ts: thread_ts || ts,
+      thread_ts: timestamp,
     });
   } catch (error) {
     logger.error("Direct message handler failed:", error);
@@ -145,17 +144,14 @@ export const appMentionCallback = async ({
 
     await say({
       text: errorMessage,
-      thread_ts: thread_ts || ts,
+      thread_ts: timestamp,
     });
   } finally {
-    // clear agent status
-    if (thread_ts) {
-      await updateAgentStatus({
-        channel,
-        thread_ts,
-        status: "",
-      });
-    }
+    await updateAgentStatus({
+      channel,
+      thread_ts: timestamp,
+      status: "",
+    });
   }
 };
 
@@ -265,39 +261,6 @@ const createPromptFromMessages = async (messages: SlackUIMessage[]) => {
   });
 
   return prompt;
-};
-
-const getChatIdFromMessages = (messages: SlackUIMessage[]) => {
-  let chatId: string | undefined;
-  for (const message of messages) {
-    if (typeof message.content === "string") {
-      const urlRegex = /https?:\/\/[^\s]+/g;
-      const urls = message.content.match(urlRegex) || [];
-
-      for (const url of urls) {
-        if (isV0ChatUrl(url)) {
-          const chatIdFromUrl = tryGetChatIdFromV0Url(url);
-          if (chatIdFromUrl) {
-            chatId = chatIdFromUrl;
-          }
-        }
-      }
-    }
-  }
-  return chatId;
-};
-
-const resolveChatId = async (
-  messages: SlackUIMessage[],
-  thread_ts?: string,
-  channel?: string,
-): Promise<string | undefined> => {
-  const chatIdFromMessages = getChatIdFromMessages(messages);
-  if (chatIdFromMessages) {
-    return chatIdFromMessages;
-  }
-
-  return await getExistingChat(thread_ts, channel);
 };
 
 const createAttachmentsArray = (
