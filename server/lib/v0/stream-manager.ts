@@ -5,7 +5,6 @@ import type {
 } from "@v0-sdk/react";
 import type { Delta } from "jsondiffpatch";
 import * as jsondiffpatch from "jsondiffpatch";
-import { app } from "~/app";
 
 const jdf = jsondiffpatch.create({});
 
@@ -73,7 +72,7 @@ export class StreamStateManager {
     }
 
     if (stream.locked) {
-      app.logger.warn("Stream is locked, cannot process");
+      console.warn("Stream is locked, cannot process");
       return;
     }
 
@@ -125,26 +124,17 @@ export class StreamStateManager {
     stream: ReadableStream<Uint8Array>,
     options: UseStreamingMessageOptions,
   ): Promise<void> => {
-    app.logger.debug("🔵 StreamManager: Starting to read stream");
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
     let currentContent: MessageBinaryFormat = [];
-    let chunkCount = 0;
-    let lineCount = 0;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          app.logger.debug("🔵 StreamManager: Stream done");
           break;
         }
-
-        chunkCount++;
-        app.logger.debug(
-          `🔵 StreamManager: Raw chunk #${chunkCount}, size: ${value.length} bytes`,
-        );
 
         const chunk = decoder.decode(value, { stream: true });
         buffer += chunk;
@@ -156,16 +146,10 @@ export class StreamStateManager {
             continue;
           }
 
-          lineCount++;
-          app.logger.debug(
-            `🔵 StreamManager: Processing line #${lineCount}: ${line.substring(0, 100)}...`,
-          );
-
           let jsonData: string;
           if (line.startsWith("data: ")) {
             jsonData = line.slice(6);
             if (jsonData === "[DONE]") {
-              app.logger.debug("🔵 StreamManager: Received [DONE] signal");
               this.setComplete(true);
               options.onComplete?.(currentContent);
               return;
@@ -176,26 +160,17 @@ export class StreamStateManager {
 
           try {
             const parsedData = JSON.parse(jsonData);
-            app.logger.debug(
-              `🔵 StreamManager: Parsed data type: ${parsedData.type || "no type"}, object: ${parsedData.object || "no object"}`,
-            );
 
             if (parsedData.type === "connected") {
-              app.logger.debug("🔵 StreamManager: Connected message");
               continue;
             } else if (parsedData.type === "done") {
-              app.logger.debug("🔵 StreamManager: Done message");
               this.setComplete(true);
               options.onComplete?.(currentContent);
               return;
             } else if (parsedData.object?.startsWith("chat")) {
-              app.logger.debug(
-                `🔵 StreamManager: Chat metadata - ${parsedData.object}`,
-              );
               options.onChatData?.(parsedData);
               continue;
             } else if (parsedData.delta) {
-              app.logger.debug("🔵 StreamManager: Applying delta patch");
               const patchedContent = patch(currentContent, parsedData.delta);
               currentContent = Array.isArray(patchedContent)
                 ? (patchedContent as MessageBinaryFormat)
@@ -203,21 +178,16 @@ export class StreamStateManager {
 
               this.updateContent(currentContent);
               options.onChunk?.(currentContent);
-              app.logger.debug(
-                `🔵 StreamManager: Content updated, length: ${JSON.stringify(currentContent).length}`,
-              );
             }
           } catch (e) {
-            app.logger.warn("Failed to parse streaming data:", line, e);
+            console.warn("Failed to parse streaming data:", line, e);
           }
         }
       }
 
-      app.logger.debug("🔵 StreamManager: Stream loop ended, setting complete");
       this.setComplete(true);
       options.onComplete?.(currentContent);
     } finally {
-      app.logger.debug("🔵 StreamManager: Releasing reader lock");
       reader.releaseLock();
     }
   };
