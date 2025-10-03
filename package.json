@@ -20,6 +20,7 @@
     "@hey-api/openapi-ts": "^0.84.4",
     "@slack/bolt": "4.4.0",
     "@slack/web-api": "^7.10.0",
+    "@upstash/redis": "^1.35.4",
     "@vercel/sdk": "^1.11.4",
     "@vercel/slack-bolt": "1.0.2",
     "ai": "latest",
