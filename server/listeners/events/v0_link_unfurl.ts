@@ -90,6 +90,7 @@ const getChatIdsFromLinks = (links: LinkSharedEvent["links"]) => {
       }
 
       const fullChatId = path.split("/")[2];
+      if (!fullChatId) continue;
       const chatId = fullChatId.split("-").at(-1);
 
       if (chatId) {
