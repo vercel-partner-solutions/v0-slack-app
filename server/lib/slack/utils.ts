@@ -41,6 +41,8 @@ export const onlyChannelType =
   }: SlackEventMiddlewareArgs<"message"> & AllMiddlewareArgs) => {
     if (event.channel_type === type) {
       await next();
+    } else {
+      return;
     }
   };
 
