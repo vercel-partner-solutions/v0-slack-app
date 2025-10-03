@@ -2,19 +2,18 @@ import { app } from "~/app";
 
 export const redis = useStorage("redis");
 
-export const getChatIDFromThread = async (
+export const getExistingChat = async (
   thread_ts: string,
+  channel: string,
 ): Promise<string | undefined> => {
-  const chatKey = `chat:${thread_ts}`;
+  const chatKey = `chat:${channel}:${thread_ts}`;
   try {
     const existingChatId = await redis.get(chatKey);
 
-    // If key doesn't exist, return undefined
     if (existingChatId === null || existingChatId === undefined) {
       return undefined;
     }
 
-    // If key exists but isn't a string, that's an error
     if (typeof existingChatId !== "string") {
       throw new Error("Existing chat ID is not a string");
     }
@@ -37,8 +36,9 @@ export const getChatIDFromThread = async (
 export const setExistingChat = async (
   thread_ts: string,
   chatId: string,
+  channel: string,
 ): Promise<void> => {
-  const chatKey = `chat:${thread_ts}`;
+  const chatKey = `chat:${channel}:${thread_ts}`;
   try {
     await redis.set(chatKey, chatId);
   } catch (error) {

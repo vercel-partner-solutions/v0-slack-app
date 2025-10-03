@@ -152,7 +152,7 @@ export const directMessageCallback = async ({
         thread_ts,
         chatId: data.id,
       });
-      await setExistingChat(thread_ts, data.id);
+      await setExistingChat(thread_ts, data.id, channel);
     }
 
     await updateAgentStatus({

@@ -2,7 +2,7 @@ import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import { generateText } from "ai";
 import { app } from "~/app";
 import { proxySlackUrl } from "~/lib/assets/utils";
-import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { getExistingChat, setExistingChat } from "~/lib/redis";
 import { createActionBlocks, SignInBlock } from "~/lib/slack/ui/blocks";
 
 import {
@@ -90,7 +90,7 @@ export const appMentionCallback = async ({
       }
 
       chat = chatData;
-      await setExistingChat(thread_ts, chat.id);
+      await setExistingChat(thread_ts, chat.id, channel);
     } else {
       logger.info(`Creating new chat with prompt: ${cleanPrompt}`);
       const { data: chatData, error: createChatError } = await chatsCreate({
@@ -115,7 +115,7 @@ export const appMentionCallback = async ({
       }
 
       // use ts here because it's a parent level message
-      await setExistingChat(ts, chatData.id);
+      await setExistingChat(ts, chatData.id, channel);
       chat = chatData;
     }
 
@@ -290,14 +290,14 @@ const getChatIdFromMessages = (messages: SlackUIMessage[]) => {
 const resolveChatId = async (
   messages: SlackUIMessage[],
   thread_ts?: string,
+  channel?: string,
 ): Promise<string | undefined> => {
-  // First priority: chat ID from v0 URLs in messages
   const chatIdFromMessages = getChatIdFromMessages(messages);
   if (chatIdFromMessages) {
     return chatIdFromMessages;
   }
 
-  return await getChatIDFromThread(thread_ts);
+  return await getExistingChat(thread_ts, channel);
 };
 
 const createAttachmentsArray = (
