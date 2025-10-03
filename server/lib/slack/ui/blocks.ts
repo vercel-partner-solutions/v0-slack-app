@@ -106,39 +106,39 @@ export const createActionBlocks = ({
       type: "actions",
       elements: actionElements,
     },
-    {
-      type: "context_actions",
-      elements: [
-        {
-          type: "feedback_buttons",
-          action_id: "feedback",
-          positive_button: {
-            text: {
-              type: "plain_text",
-              text: "Good Response",
-            },
-            value: `positive_${chatId}`,
-          },
-          negative_button: {
-            text: {
-              type: "plain_text",
-              text: "Bad Response",
-            },
-            value: `negative_${chatId}`,
-          },
-        },
-        {
-          type: "icon_button",
-          action_id: "remove",
-          icon: "trash",
-          text: {
-            type: "plain_text",
-            text: "Remove",
-          },
-          value: chatId,
-        },
-      ],
-    },
+    // {
+    //   type: "context_actions",
+    //   elements: [
+    //     {
+    //       type: "feedback_buttons",
+    //       action_id: "feedback",
+    //       positive_button: {
+    //         text: {
+    //           type: "plain_text",
+    //           text: "Good Response",
+    //         },
+    //         value: `positive_${chatId}`,
+    //       },
+    //       negative_button: {
+    //         text: {
+    //           type: "plain_text",
+    //           text: "Bad Response",
+    //         },
+    //         value: `negative_${chatId}`,
+    //       },
+    //     },
+    //     {
+    //       type: "icon_button",
+    //       action_id: "remove",
+    //       icon: "trash",
+    //       text: {
+    //         type: "plain_text",
+    //         text: "Remove",
+    //       },
+    //       value: chatId,
+    //     },
+    //   ],
+    // },
   ];
 };
 
