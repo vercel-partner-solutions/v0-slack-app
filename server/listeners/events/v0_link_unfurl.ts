@@ -2,6 +2,7 @@ import type { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import type { LinkSharedEvent } from "@slack/web-api";
 import { app } from "~/app";
 import { getSession, type Session } from "~/lib/auth/session";
+import { PRIVACY_LABELS, VALID_PRIVACY_LEVELS } from "~/lib/constants";
 import { chatsGetById } from "~/lib/v0/client";
 
 export const v0LinkUnfurlCallback = async ({
@@ -31,15 +32,32 @@ export const v0LinkUnfurlCallback = async ({
 
   const chatResults = await getAllChats(chatIds, session);
 
-  const privateChatIds = [];
+  const chatsToWarn: Array<{
+    id: string;
+    name?: string;
+    privacy: string;
+  }> = [];
 
   for (const chat of chatResults) {
-    if (chat.status === "fulfilled" && chat.value.data.privacy === "private") {
-      privateChatIds.push(chat.value.data.id);
+    if (
+      chat.status === "fulfilled" &&
+      chat.value.data.privacy !== "team-edit"
+    ) {
+      chatsToWarn.push({
+        id: chat.value.data.id,
+        name: chat.value.data.name || chat.value.data.title,
+        privacy: chat.value.data.privacy,
+      });
     }
   }
 
-  for (const chatId of privateChatIds) {
+  for (const chat of chatsToWarn) {
+    const chatId = chat.id;
+    const chatName = chat.name || "Untitled chat";
+    const currentPrivacy = chat.privacy;
+    const currentPrivacyLabel =
+      PRIVACY_LABELS[currentPrivacy] || currentPrivacy;
+
     await client.chat.postEphemeral({
       channel: event.channel,
       thread_ts: event.thread_ts,
@@ -49,29 +67,39 @@ export const v0LinkUnfurlCallback = async ({
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `This chat isn't available to your whole team.`,
-          },
-          accessory: {
-            type: "button",
-            text: {
-              type: "plain_text",
-              text: "Share",
-            },
-            action_id: "share_chat_action",
-            value: chatId,
+            text: `*<https://v0.app/chat/${chatId}|${chatName}>* is currently set to: *${currentPrivacyLabel}*\n\nUpdate the sharing permissions to allow your team to collaborate.\n\n*Choose an option:*`,
           },
         },
         {
-          type: "context",
+          type: "actions",
           elements: [
             {
-              type: "mrkdwn",
-              text: "This will grant _team edit_ access to the chat.",
+              type: "static_select",
+              placeholder: {
+                type: "plain_text",
+                text: PRIVACY_LABELS.private,
+              },
+              action_id: "share_access_select_action",
+              options: VALID_PRIVACY_LEVELS.map((level) => ({
+                text: {
+                  type: "plain_text",
+                  text: PRIVACY_LABELS[level],
+                },
+                value: `${level}_${currentPrivacy}_${chatId}`,
+              })),
+            },
+            {
+              type: "button",
+              text: {
+                type: "plain_text",
+                text: "Skip this",
+              },
+              action_id: "skip_share_action",
             },
           ],
         },
       ],
-      text: `This chat isn't available to your whole team.`,
+      text: `We recommend setting this chat to team-edit for the best experience.`,
     });
   }
 };
