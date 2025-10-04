@@ -15,9 +15,7 @@
       "display_name": "v0",
       "always_online": true
     },
-    "unfurl_domains": [
-      "v0.app"
-    ],
+    "unfurl_domains": ["v0.app"],
     "assistant_view": {
       "assistant_description": "v0 turns your ideas into real web apps, no coding required. Describe what you want with natural language, and v0's intelligent agent builds it for you using modern frontend tools. v0 can search the web, inspect sites, automatically fix errors, and integrate with external tools."
     }
@@ -43,7 +41,7 @@
   },
   "settings": {
     "event_subscriptions": {
-      "request_url": "https://flavourful-irena-undappled.ngrok-free.dev/api/slack/events",
+      "request_url": "https://v0-slack-app.labs.vercel.dev/api/slack/events",
       "bot_events": [
         "app_home_opened",
         "app_mention",
@@ -58,7 +56,7 @@
     },
     "interactivity": {
       "is_enabled": true,
-      "request_url": "https://flavourful-irena-undappled.ngrok-free.dev/api/slack/events"
+      "request_url": "https://v0-slack-app.labs.vercel.dev/api/slack/events"
     },
     "org_deploy_enabled": true,
     "socket_mode_enabled": false,
