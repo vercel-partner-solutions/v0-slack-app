@@ -4,12 +4,13 @@ import type {
   SlackEventMiddlewareArgs,
 } from "@slack/bolt";
 import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
+import { v0 } from "v0-sdk";
 import { app } from "~/app";
-
 import { proxySlackUrl } from "~/lib/assets/utils";
-import { setChat } from "~/lib/redis";
+import { getChatIDFromThread, setChat } from "~/lib/redis";
 import { SignInBlock } from "~/lib/slack/ui/blocks";
 import { updateAgentStatus } from "~/lib/slack/utils";
+import { handleV0StreamToSlack } from "~/lib/v0/streaming-handler";
 import { chatsCreate, chatsSendMessage } from "~/lib/v0/client";
 import { cleanV0Stream } from "~/lib/v0/utils";
 
@@ -57,6 +58,11 @@ export const directMessageCallback = async ({
     appId,
   });
 
+  logger.debug("📬 Direct message received");
+  logger.debug(
+    `Channel: ${channel}, Thread: ${thread_ts}, Text length: ${event.text?.length}`,
+  );
+
   try {
     app.logger.info("Updating agent status", {
       channel,
@@ -88,6 +94,9 @@ export const directMessageCallback = async ({
       return;
     }
 
+    const existingChatId = await getChatIDFromThread(thread_ts);
+    logger.debug(`Chat ID from thread: ${existingChatId || "none (new chat)"}`);
+
     const attachments = createAttachmentsArray(files || []);
     app.logger.info("Creating attachments array for direct message", {
       attachments,
@@ -103,89 +112,59 @@ export const directMessageCallback = async ({
       }).catch((error) => logger.warn("Failed to update agent status:", error));
     }
 
-    const body = {
-      message: event.text,
-      responseMode: "sync" as const,
-      attachments,
-      system: SYSTEM_PROMPT,
-    };
-    const headers = {
-      Authorization: `Bearer ${session.token}`,
-      "x-scope": session.selectedTeamId,
-      "x-v0-client": "slack",
-    };
-    logger.info("Creating chat or sending message to chat", {
-      isNewChat,
-      chatId,
-    });
-    await updateAgentStatus({
-      channel,
-      thread_ts,
-      status: isNewChat ? "is creating a new chat..." : "is sending message...",
-    }).catch((error) => logger.warn("Failed to update agent status:", error));
+    let stream: ReadableStream<Uint8Array>;
+    const isNewChatStream = !existingChatId;
 
-    const { data, error } = isNewChat
-      ? await chatsCreate({
-          body,
-          headers,
-        })
-      : await chatsSendMessage({
-          path: {
-            chatId,
-          },
-          body,
-          headers,
-        });
-
-    if (error) {
-      throw new Error(error.error.message, { cause: error.error.type });
-    }
-
-    await updateAgentStatus({
-      channel,
-      thread_ts,
-      status: "is saving chat...",
-    }).catch((error) => logger.warn("Failed to update agent status:", error));
-
-    if (isNewChat) {
-      app.logger.info("Setting existing chat", {
-        thread_ts,
-        chatId: data.id,
+    if (existingChatId) {
+      logger.debug(`🔄 Sending message to existing chat: ${existingChatId}`);
+      const response = await v0.chats.sendMessage({
+        chatId: existingChatId,
+        message: event.text,
+        responseMode: "experimental_stream",
+        attachments,
       });
       await setChat({ ts: thread_ts, channel, team, chatId: data.id });
     }
 
-    await updateAgentStatus({
+      if (!(response instanceof ReadableStream)) {
+        throw new Error("Expected stream response");
+      }
+      logger.debug("✅ Got stream from v0.chats.sendMessage");
+      stream = response;
+    } else {
+      logger.debug("🆕 Creating new chat");
+      const response = await v0.chats.create({
+        message: event.text,
+        attachments,
+        responseMode: "experimental_stream",
+        system: SYSTEM_PROMPT,
+      });
+
+      if (!(response instanceof ReadableStream)) {
+        throw new Error("Expected stream response");
+      }
+      logger.debug("✅ Got stream from v0.chats.create");
+      stream = response;
+    }
+
+    logger.debug("🚀 Calling handleV0StreamToSlack...");
+    await handleV0StreamToSlack({
+      client,
+      logger,
       channel,
       thread_ts,
-      status: "is cleaning chat...",
-    }).catch((error) => logger.warn("Failed to update agent status:", error));
-
-    const cleanedChat = cleanV0Stream(data.text);
-    const webUrl = data.webUrl || `https://v0.dev/chat/${data.id}`;
-    const demoUrl = data.latestVersion?.demoUrl;
-
-    app.logger.info("Sending chat response to Slack", {
-      thread_ts,
-      webUrl,
-      demoUrl,
-      cleanedChat,
+      v0Stream: stream,
+      onComplete: async (completedChatId) => {
+        logger.debug(`✅ Stream complete callback, chatId: ${completedChatId}`);
+        if (isNewChatStream && completedChatId) {
+          logger.debug(`💾 Saving chat ID: ${completedChatId}`);
+          await setExistingChat(thread_ts, completedChatId);
+        }
+      },
     });
-    await updateAgentStatus({
-      channel,
-      thread_ts,
-      status: "is sending chat response to Slack...",
-    }).catch((error) => logger.warn("Failed to update agent status:", error));
-
-    await sendChatResponseToSlack(say, cleanedChat, thread_ts, webUrl, demoUrl);
-    app.logger.info("Chat response sent to Slack", {
-      thread_ts,
-      webUrl,
-      demoUrl,
-      cleanedChat,
-    });
-  } catch (error: unknown) {
-    logger.error("Direct message handler failed:", error);
+    logger.debug("✅ handleV0StreamToSlack finished");
+  } catch (error) {
+    logger.error("❌ Direct message handler failed:", error);
 
     const errorMessage =
       error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE;
@@ -204,7 +183,7 @@ export const directMessageCallback = async ({
       channel,
       thread_ts,
       status: "",
-    });
+    }).catch((error) => logger.warn("Failed to clear agent status:", error));
   }
 };
 

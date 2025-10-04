@@ -14,6 +14,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
     "openapi": "node --experimental-strip-types scripts/openapi.mts",
+    "test:streaming": "bun run scripts/test-streaming.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -21,11 +22,14 @@
     "@slack/bolt": "4.4.0",
     "@slack/web-api": "^7.10.0",
     "@upstash/redis": "^1.35.4",
+    "@v0-sdk/react": "^0.3.1",
     "@vercel/sdk": "^1.11.4",
     "@vercel/slack-bolt": "1.0.2",
     "ai": "latest",
     "arctic": "^3.7.0",
     "h3": "^1.15.4",
+    "jsondiffpatch": "^0.7.3",
+    "v0-sdk": "^0.14.0",
     "zod": "^4.0.17"
   },
   "devDependencies": {
