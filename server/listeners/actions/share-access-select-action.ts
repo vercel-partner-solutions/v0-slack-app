@@ -96,8 +96,9 @@ export const shareAccessSelectActionCallback = async ({
       },
     });
 
+    clearTimeout(timeout);
+
     if (error) {
-      clearTimeout(timeout);
       throw new Error(error.error.message, { cause: error.error.type });
     }
 
