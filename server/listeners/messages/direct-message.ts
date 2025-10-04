@@ -6,9 +6,8 @@ import type {
 import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
 import { v0 } from "v0-sdk";
 import { app } from "~/app";
-
 import { proxySlackUrl } from "~/lib/assets/utils";
-import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { getChatIDFromThread, setChat } from "~/lib/redis";
 import { SignInBlock } from "~/lib/slack/ui/blocks";
 import { updateAgentStatus } from "~/lib/slack/utils";
 import { handleV0StreamToSlack } from "~/lib/v0/streaming-handler";
@@ -34,7 +33,7 @@ export const directMessageCallback = async ({
     event,
   });
 
-  const { channel, thread_ts, files } = event;
+  const { channel, thread_ts, files, team } = event;
   const { session, isNewChat, chatId } = context;
   const appId = body.api_app_id;
 
@@ -124,6 +123,8 @@ export const directMessageCallback = async ({
         responseMode: "experimental_stream",
         attachments,
       });
+      await setChat({ ts: thread_ts, channel, team, chatId: data.id });
+    }
 
       if (!(response instanceof ReadableStream)) {
         throw new Error("Expected stream response");

@@ -3,14 +3,12 @@ import { generateText } from "ai";
 import { v0 } from "v0-sdk";
 import { app } from "~/app";
 import { proxySlackUrl } from "~/lib/assets/utils";
-import { getChatIDFromThread, setExistingChat } from "~/lib/redis";
+import { getChat, setChat } from "~/lib/redis";
 import { createActionBlocks, SignInBlock } from "~/lib/slack/ui/blocks";
 import {
   getMessagesFromEvent,
-  isV0ChatUrl,
   type SlackUIMessage,
   stripSlackUserTags,
-  tryGetChatIdFromV0Url,
   updateAgentStatus,
 } from "~/lib/slack/utils";
 import { handleV0StreamToSlack } from "~/lib/v0/streaming-handler";
@@ -33,7 +31,7 @@ export const appMentionCallback = async ({
   logger,
   body,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
-  const { channel, thread_ts, ts } = event;
+  const { channel, thread_ts, ts, team } = event;
   const { userId, teamId, session } = context;
   const appId = body.api_app_id;
 
@@ -46,14 +44,14 @@ export const appMentionCallback = async ({
         channel,
         blocks: [SignInBlock({ user: userId, teamId, appId })],
         text: `Hi, <@${userId}>. Please sign in to continue.`,
-        thread_ts: thread_ts || ts,
+        thread_ts: timestamp,
       });
       return;
     }
 
     await updateAgentStatus({
       channel,
-      thread_ts: thread_ts || ts,
+      thread_ts: timestamp,
       status: "is thinking...",
     });
 
@@ -65,7 +63,7 @@ export const appMentionCallback = async ({
     const [prompt, attachments, chatId] = await Promise.all([
       createPromptFromMessages(messages),
       createAttachmentsArray(messages),
-      resolveChatId(messages, thread_ts),
+      getChat({ ts: timestamp, channel, team }),
     ]);
     logger.debug(`Prompt: ${prompt.substring(0, 100)}...`);
     logger.debug(
@@ -130,7 +128,7 @@ export const appMentionCallback = async ({
 
     await say({
       text: errorMessage,
-      thread_ts: thread_ts || ts,
+      thread_ts: timestamp,
     });
   } finally {
     if (thread_ts) {
@@ -249,39 +247,6 @@ const createPromptFromMessages = async (messages: SlackUIMessage[]) => {
   });
 
   return prompt;
-};
-
-const getChatIdFromMessages = (messages: SlackUIMessage[]) => {
-  let chatId: string | undefined;
-  for (const message of messages) {
-    if (typeof message.content === "string") {
-      const urlRegex = /https?:\/\/[^\s]+/g;
-      const urls = message.content.match(urlRegex) || [];
-
-      for (const url of urls) {
-        if (isV0ChatUrl(url)) {
-          const chatIdFromUrl = tryGetChatIdFromV0Url(url);
-          if (chatIdFromUrl) {
-            chatId = chatIdFromUrl;
-          }
-        }
-      }
-    }
-  }
-  return chatId;
-};
-
-const resolveChatId = async (
-  messages: SlackUIMessage[],
-  thread_ts?: string,
-): Promise<string | undefined> => {
-  // First priority: chat ID from v0 URLs in messages
-  const chatIdFromMessages = getChatIdFromMessages(messages);
-  if (chatIdFromMessages) {
-    return chatIdFromMessages;
-  }
-
-  return await getChatIDFromThread(thread_ts);
 };
 
 const createAttachmentsArray = (
