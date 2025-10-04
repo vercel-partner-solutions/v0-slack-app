@@ -7,7 +7,7 @@ import type { ActionsBlockElement, GenericMessageEvent } from "@slack/web-api";
 import { app } from "~/app";
 
 import { proxySlackUrl } from "~/lib/assets/utils";
-import { setExistingChat } from "~/lib/redis";
+import { setChat } from "~/lib/redis";
 import { SignInBlock } from "~/lib/slack/ui/blocks";
 import { updateAgentStatus } from "~/lib/slack/utils";
 import { chatsCreate, chatsSendMessage } from "~/lib/v0/client";
@@ -32,7 +32,7 @@ export const directMessageCallback = async ({
     event,
   });
 
-  const { channel, thread_ts, files } = event;
+  const { channel, thread_ts, files, team } = event;
   const { session, isNewChat, chatId } = context;
   const appId = body.api_app_id;
 
@@ -152,7 +152,7 @@ export const directMessageCallback = async ({
         thread_ts,
         chatId: data.id,
       });
-      await setExistingChat(thread_ts, data.id);
+      await setChat({ ts: thread_ts, channel, team, chatId: data.id });
     }
 
     await updateAgentStatus({
